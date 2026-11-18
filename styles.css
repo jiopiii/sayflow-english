@@ -62,11 +62,18 @@ textarea {
 
 button {
   color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+button > svg {
+  display: block;
+  flex: none;
 }
 
 button:focus-visible,
@@ -111,6 +118,7 @@ textarea:focus-visible {
 
 .brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 11px;
   color: var(--ink);
@@ -170,6 +178,7 @@ textarea:focus-visible {
 
 .top-actions {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
 }
@@ -188,6 +197,7 @@ textarea:focus-visible {
 .nav-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-height: 42px;
   padding: 0 10px 0 13px;
@@ -196,6 +206,7 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.66);
   font-size: 13px;
   font-weight: 650;
+  line-height: 1;
   backdrop-filter: blur(12px);
 }
 
@@ -2627,7 +2638,9 @@ textarea:focus-visible {
   }
 
   .topbar {
-    padding-top: 14px;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-right: env(safe-area-inset-right);
+    padding-left: env(safe-area-inset-left);
   }
 
   .brand-copy small,
@@ -2636,7 +2649,21 @@ textarea:focus-visible {
   }
 
   .nav-button {
-    padding: 0 8px;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .top-actions {
+    gap: 6px;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 
   .page-shell {

@@ -2873,6 +2873,7 @@ JSON 必须严格使用以下结构：
     window.clearInterval(speechWatchdog);
     activeSpeechUtterances = [];
     window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
     const accent = overrides.accent || settings.accent;
     const lang = accent === "uk" ? "en-GB" : "en-US";
     const voiceURI = Object.prototype.hasOwnProperty.call(overrides, "voiceURI")
@@ -2897,6 +2898,7 @@ JSON 必须严格使用以下结构：
       utterance.lang = lang;
       utterance.rate = rate;
       utterance.pitch = 1;
+      utterance.volume = 1;
       if (preferred) utterance.voice = preferred;
       activeSpeechUtterances.push(utterance);
       const finishSegment = () => {
@@ -2908,12 +2910,13 @@ JSON 必须严格使用以下结构：
       window.speechSynthesis.speak(utterance);
     };
 
-    window.setTimeout(speakNext, 80);
     speechWatchdog = window.setInterval(() => {
       if (runId === speechRunId && window.speechSynthesis.speaking) {
         window.speechSynthesis.resume();
       }
     }, 4000);
+    // iOS Safari only accepts the first speech request while the tap is still active.
+    speakNext();
   }
 
   function splitSpeechText(text) {
