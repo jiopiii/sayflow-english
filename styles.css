@@ -39,6 +39,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.boot-status {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(104, 35, 25, 0.18);
+  color: #5d2118;
+  background: #fff1e9;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+
 button,
 input,
 textarea {

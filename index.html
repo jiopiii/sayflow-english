@@ -8,9 +8,14 @@
   <title>随说 SayFlow · 澳洲 WHV 英语</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=20261117-26">
+  <link rel="stylesheet" href="./styles.css?v=20261118-27">
 </head>
 <body>
+  <noscript>
+    <div class="boot-status boot-status-error" role="alert">
+      当前浏览器没有启用 JavaScript，页面无法交互。请在浏览器设置中开启 JavaScript，或改用 Safari、Chrome、Edge 打开。
+    </div>
+  </noscript>
   <div class="ambient ambient-one"></div>
   <div class="ambient ambient-two"></div>
 
@@ -383,9 +388,44 @@
     </article>
   </template>
 
-  <script src="./pack.js?v=20261117-2" defer></script>
-  <script src="./lexicon.js?v=20261117-10" defer></script>
-  <script src="./lexicon-extra.js?v=20261117-11" defer></script>
-  <script src="./app.js?v=20261117-29" defer></script>
+  <script>
+    (() => {
+      const showBootFailure = (detail) => {
+        if (window.SAYFLOW_RUNTIME) return;
+        let banner = document.querySelector(".boot-status-error");
+        if (!banner) {
+          banner = document.createElement("div");
+          banner.className = "boot-status boot-status-error";
+          banner.setAttribute("role", "alert");
+          document.body.prepend(banner);
+        }
+        banner.textContent = `页面交互没有加载成功${detail ? `：${detail}` : ""}。请刷新页面，或改用 Safari、Chrome、Edge 打开。`;
+      };
+
+      window.addEventListener("error", (event) => {
+        if (window.SAYFLOW_RUNTIME) return;
+        if (event.target instanceof HTMLScriptElement) {
+          const file = event.target.src.split("/").pop() || "外部脚本";
+          showBootFailure(`无法载入 ${file}`);
+        } else if (event.error) {
+          showBootFailure(event.error.message || "JavaScript 运行错误");
+        }
+      }, true);
+
+      window.addEventListener("unhandledrejection", (event) => {
+        if (window.SAYFLOW_RUNTIME) return;
+        const message = event.reason?.message || String(event.reason || "未知错误");
+        showBootFailure(message);
+      });
+
+      window.setTimeout(() => {
+        if (!window.SAYFLOW_RUNTIME) showBootFailure("页面初始化超时");
+      }, 6000);
+    })();
+  </script>
+  <script src="./pack.js?v=20261118-3"></script>
+  <script src="./lexicon.js?v=20261118-12"></script>
+  <script src="./lexicon-extra.js?v=20261118-13"></script>
+  <script src="./app.js?v=20261118-30"></script>
 </body>
 </html>
