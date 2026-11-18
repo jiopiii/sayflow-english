@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.0.0",
+    contentVersion: "1.1.0",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -26,10 +26,11 @@
     lookupCache: "sayflow.lookupCache.v1"
   };
 
+  const LEXICON_META = window.SAYFLOW_LEXICON_META || {};
   const BUILTIN_LEXICON = [
     ...(Array.isArray(window.SAYFLOW_LEXICON) ? window.SAYFLOW_LEXICON : []),
     ...(Array.isArray(window.SAYFLOW_LEXICON_EXTRA) ? window.SAYFLOW_LEXICON_EXTRA : [])
-  ];
+  ].map(withLexiconMetadata);
   let customLexicon = loadJson(STORAGE_KEYS.customLexicon, []);
   let LEXICON = [...BUILTIN_LEXICON, ...customLexicon];
   const LEXICON_CATEGORY_LABELS = {
@@ -1620,6 +1621,9 @@ JSON 必须严格使用以下结构：
         kind: /\s|-/.test(cleanText(entry?.term)) ? "phrase" : "word",
         zh: cleanText(entry?.zh),
         example: cleanText(entry?.example),
+        ipa: cleanText(entry?.ipa || entry?.ipaUs),
+        pos: asArray(entry?.pos).map(cleanText).filter(Boolean),
+        forms: asArray(entry?.forms),
         aliases: asArray(entry?.aliases).map(cleanText).filter(Boolean),
         zhTriggers: asArray(entry?.zhTriggers).map(cleanText).filter(Boolean)
       }))
@@ -1631,8 +1635,20 @@ JSON 必须严格使用以下结构：
   function rebuildLexicon() {
     LEXICON = [
       ...BUILTIN_LEXICON,
-      ...customLexicon.filter((entry) => !entry.packId || entry.packId === PACK.id)
+      ...customLexicon
+        .filter((entry) => !entry.packId || entry.packId === PACK.id)
+        .map(withLexiconMetadata)
     ];
+  }
+
+  function withLexiconMetadata(entry) {
+    const meta = LEXICON_META[entry?.term] || {};
+    return {
+      ...entry,
+      ipa: cleanText(entry?.ipa) || cleanText(meta.ipa),
+      pos: asArray(entry?.pos).length ? asArray(entry.pos) : asArray(meta.pos),
+      forms: asArray(entry?.forms).length ? asArray(entry.forms) : asArray(meta.forms)
+    };
   }
 
   function persistCustomLexicon() {
@@ -1726,6 +1742,9 @@ JSON 必须严格使用以下结构：
         entry.zh,
         entry.example,
         entry.note,
+        entry.ipa,
+        ...(entry.pos || []),
+        ...(entry.forms || []).flatMap((form) => [form.label, form.value]),
         ...(entry.aliases || []),
         LEXICON_CATEGORY_LABELS[entry.category]
       ].join(" ").toLowerCase().includes(query);
@@ -1743,23 +1762,43 @@ JSON 必须严格使用以下结构：
       elements.lexiconList.innerHTML = '<div class="library-empty"><div><span>no match.</span>没有匹配的词条</div></div>';
       return;
     }
-    elements.lexiconList.innerHTML = visibleEntries.map((entry) => `
-      <article class="lexicon-card">
-        <div class="lexicon-card-top">
-          <h3 class="lexicon-term">${escapeHtml(entry.term)}</h3>
-          <span class="lexicon-tag ${entry.custom ? "custom" : ""}">
-            ${entry.custom ? "自定义 · " : ""}${escapeHtml(LEXICON_CATEGORY_LABELS[entry.category] || entry.category)}
-          </span>
-        </div>
-        <p class="lexicon-zh">${escapeHtml(entry.zh)}</p>
-        <p class="lexicon-example">${escapeHtml(entry.example)}</p>
-        <div class="lexicon-actions">
-          <button class="lexicon-action" type="button" data-lexicon-speak="${escapeAttribute(entry.term)}">朗读</button>
-          <button class="lexicon-action" type="button" data-lexicon-copy="${escapeAttribute(entry.term)}">复制</button>
-          ${entry.custom ? `<button class="lexicon-action lexicon-delete" type="button" data-lexicon-delete="${escapeAttribute(entry.id)}">删除</button>` : ""}
-        </div>
-      </article>
-    `).join("") + (entries.length > visibleEntries.length
+    elements.lexiconList.innerHTML = visibleEntries.map((entry) => {
+      const meta = [
+        entry.ipa ? `<span>${escapeHtml(entry.ipa)}</span>` : "",
+        entry.pos?.length ? `<span>${escapeHtml(entry.pos.join(" / "))}</span>` : "",
+        entry.forms?.length
+          ? `<span>${entry.forms.slice(0, 2).map((form) => `${escapeHtml(form.label)} ${escapeHtml(form.value)}`).join(" · ")}</span>`
+          : ""
+      ].filter(Boolean).join("");
+      return `
+        <article class="lexicon-card">
+          <div class="lexicon-card-top">
+            <div class="lexicon-main">
+              <div class="lexicon-title-row">
+                <h3 class="lexicon-term">${escapeHtml(entry.term)}</h3>
+                <span class="lexicon-tag ${entry.custom ? "custom" : ""}">
+                  ${entry.custom ? "自定义 · " : ""}${escapeHtml(LEXICON_CATEGORY_LABELS[entry.category] || entry.category)}
+                </span>
+              </div>
+              ${meta ? `<p class="lexicon-meta">${meta}</p>` : ""}
+            </div>
+            <div class="lexicon-actions">
+              <button class="mini-action" type="button" data-lexicon-speak="${escapeAttribute(entry.term)}" aria-label="朗读" title="朗读">
+                ${speakerIcon()}
+              </button>
+              <button class="mini-action" type="button" data-lexicon-copy="${escapeAttribute(entry.term)}" aria-label="复制" title="复制">
+                ${copyIcon()}
+              </button>
+              ${entry.custom ? `<button class="mini-action lexicon-delete" type="button" data-lexicon-delete="${escapeAttribute(entry.id)}" aria-label="删除自定义词条" title="删除">
+                ${trashIcon()}
+              </button>` : ""}
+            </div>
+          </div>
+          <p class="lexicon-zh">${escapeHtml(entry.zh)}</p>
+          <p class="lexicon-example">${escapeHtml(entry.example)}</p>
+        </article>
+      `;
+    }).join("") + (entries.length > visibleEntries.length
       ? `<button class="lexicon-load-more" type="button" data-lexicon-more>再显示 60 个</button>`
       : "");
   }
@@ -3776,5 +3815,9 @@ JSON 必须严格使用以下结构：
 
   function lexiconIcon() {
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path><path d="M8 20a3 3 0 0 1-3-3h14M12 8v6M9 11h6"></path></svg>';
+  }
+
+  function trashIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"></path></svg>';
   }
 })();
