@@ -1141,36 +1141,26 @@ textarea:focus-visible {
 }
 
 .mini-action {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border-radius: 50%;
   color: var(--green);
   background: rgba(49, 84, 62, 0.07);
+  line-height: 0;
 }
 
 .mini-action:hover {
   background: rgba(49, 84, 62, 0.13);
 }
 
-.mini-text-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 34px;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: 999px;
-  color: var(--green);
-  background: rgba(49, 84, 62, 0.07);
-  font-size: 9px;
-  font-weight: 760;
-  white-space: nowrap;
-}
-
-.mini-text-action:hover {
-  background: rgba(49, 84, 62, 0.13);
+.mini-action svg {
+  width: 15px;
+  height: 15px;
+  margin: auto;
 }
 
 .version-text {
@@ -1225,8 +1215,8 @@ textarea:focus-visible {
 }
 
 .chunk-actions .mini-action {
-  width: 27px;
-  height: 27px;
+  width: 26px;
+  height: 26px;
 }
 
 .chunk-text {

@@ -4,6 +4,8 @@
   const PACK_SOURCE = window.SAYFLOW_PACK || null;
   const PACK_SCHEMA_VERSION = 2;
   const LEGACY_PACK_ID = "en-AU-whv";
+  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const PACK = PACK_SOURCE || {
     id: "en-AU-whv",
     label: "澳洲 WHV",
@@ -2485,7 +2487,9 @@ JSON 必须严格使用以下结构：
         <div class="version-top">
           <span class="version-style">${escapeHtml(STYLE_LABELS[version.style] || version.style || "自然表达")}</span>
           <div class="version-actions">
-            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(version.text)}">收藏</button>
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(version.text)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(version.text)}" aria-label="朗读地道表达">
               ${speakerIcon()}
             </button>
@@ -2512,11 +2516,15 @@ JSON 必须严格使用以下结构：
         <div class="chunk-top">
           <span class="chunk-type">${escapeHtml(chunk.type)}</span>
           <div class="chunk-actions">
-            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(chunk.text)}">收藏</button>
-            <button class="mini-text-action" type="button"
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(chunk.text)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
+            <button class="mini-action" type="button" aria-label="加入词库" title="加入词库"
               data-save-term="${escapeAttribute(chunk.text)}"
               data-save-meaning="${escapeAttribute(chunk.meaning || "")}"
-              data-save-example="${escapeAttribute(chunk.example || "")}">词库</button>
+              data-save-example="${escapeAttribute(chunk.example || "")}">
+              ${lexiconIcon()}
+            </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(chunk.text)}" aria-label="朗读语块">
               ${speakerIcon()}
             </button>
@@ -2579,7 +2587,9 @@ JSON 必须严格使用以下结构：
           <p class="coach-text">${escapeHtml(currentTask.followUp)}</p>
           ${currentTask.followUpZh ? `<p class="coach-translation">${escapeHtml(currentTask.followUpZh)}</p>` : ""}
           <div class="coach-actions">
-            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(currentTask.followUp)}">收藏</button>
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(currentTask.followUp)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.followUp)}" aria-label="朗读对方追问">
               ${speakerIcon()}
             </button>
@@ -2590,7 +2600,9 @@ JSON 必须严格使用以下结构：
           <p class="coach-text">${escapeHtml(currentTask.repair)}</p>
           <p class="coach-translation">先争取时间，再把对话接回来。</p>
           <div class="coach-actions">
-            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(currentTask.repair)}">收藏</button>
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(currentTask.repair)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.repair)}" aria-label="朗读救场表达">
               ${speakerIcon()}
             </button>
@@ -2682,10 +2694,12 @@ JSON 必须严格使用以下结构：
             <span class="item-type">${escapeHtml(TYPE_LABELS[item.type] || item.type || "重点")}</span>
           </div>
           <div class="item-actions">
-            <button class="mini-text-action" type="button"
+            <button class="mini-action" type="button" aria-label="加入词库" title="加入词库"
               data-save-term="${escapeAttribute(item.text)}"
               data-save-meaning="${escapeAttribute(item.meaning || "")}"
-              data-save-example="${escapeAttribute(item.examples?.[0]?.en || "")}">加入词库</button>
+              data-save-example="${escapeAttribute(item.examples?.[0]?.en || "")}">
+              ${lexiconIcon()}
+            </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(item.text)}" aria-label="朗读这个表达">
               ${speakerIcon()}
             </button>
@@ -2971,10 +2985,21 @@ JSON 必须严格使用以下结构：
   }
 
   function getPreferredVoice(lang, voiceURI = settings.voiceURI) {
-    if (!voiceURI) return null;
     const voices = window.speechSynthesis.getVoices();
-    const selected = voices.find((voice) => voice.voiceURI === voiceURI);
-    return selected && /^en(?:[-_]|$)/i.test(selected.lang) ? selected : null;
+    if (voiceURI) {
+      const selected = voices.find((voice) => voice.voiceURI === voiceURI);
+      if (selected && /^en(?:[-_]|$)/i.test(selected.lang)) return selected;
+    }
+    if (IS_IOS) return null;
+    const matching = voices.filter((voice) =>
+      voice.lang.replace("_", "-") === lang
+    );
+    const preferredNames = PREFERRED_VOICES[lang] || PREFERRED_VOICES["en-US"];
+    for (const name of preferredNames) {
+      const voice = matching.find((item) => item.name.includes(name));
+      if (voice) return voice;
+    }
+    return matching.find((voice) => voice.localService) || matching[0] || null;
   }
 
   function speakText(text, overrides = {}) {
@@ -2986,8 +3011,12 @@ JSON 必须严格使用以下结构：
     window.clearInterval(speechWatchdog);
     activeSpeechUtterances = [];
     const speech = window.speechSynthesis;
-    if (speech.speaking || speech.pending) speech.cancel();
-    if (speech.paused) speech.resume();
+    if (IS_IOS) {
+      if (speech.speaking || speech.pending) speech.cancel();
+      if (speech.paused) speech.resume();
+    } else {
+      speech.cancel();
+    }
     const accent = overrides.accent || settings.accent;
     const lang = accent === "uk" ? "en-GB" : "en-US";
     const voiceURI = Object.prototype.hasOwnProperty.call(overrides, "voiceURI")
@@ -2998,6 +3027,8 @@ JSON 必须严格使用以下结构：
     const segments = splitSpeechText(text);
     if (!segments.length) return;
     document.documentElement.dataset.speechSegments = String(segments.length);
+    document.documentElement.dataset.speechStatus = "starting";
+    document.documentElement.dataset.speechVoice = preferred?.name || "system-default";
 
     const speakNext = () => {
       if (runId !== speechRunId) return;
@@ -3019,10 +3050,21 @@ JSON 必须严格使用以下结构：
         activeSpeechUtterances = activeSpeechUtterances.filter((item) => item !== utterance);
         window.setTimeout(speakNext, 160);
       };
-      utterance.onend = finishSegment;
+      utterance.onstart = () => {
+        if (runId === speechRunId) {
+          document.documentElement.dataset.speechStatus = "playing";
+        }
+      };
+      utterance.onend = () => {
+        if (runId === speechRunId) {
+          document.documentElement.dataset.speechStatus = segments.length ? "continuing" : "ended";
+        }
+        finishSegment();
+      };
       utterance.onerror = (event) => {
         if (runId === speechRunId && !["interrupted", "canceled"].includes(event.error)) {
-          showToast("系统语音未能播放，请检查 iPhone 静音开关和语音设置");
+          document.documentElement.dataset.speechStatus = `error:${event.error || "unknown"}`;
+          showToast("系统语音未能播放，请检查静音、媒体音量和系统语音设置");
         }
         finishSegment();
       };
@@ -3035,7 +3077,12 @@ JSON 必须严格使用以下结构：
       }
     }, 4000);
     // iOS Safari only accepts the first speech request while the tap is still active.
-    speakNext();
+    if (IS_IOS) {
+      // iOS Safari only accepts the first speech request while the tap is still active.
+      speakNext();
+    } else {
+      window.setTimeout(speakNext, 80);
+    }
   }
 
   function splitSpeechText(text) {
@@ -3721,5 +3768,13 @@ JSON 必须严格使用以下结构：
 
   function copyIcon() {
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>';
+  }
+
+  function bookmarkIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4V4Z"></path></svg>';
+  }
+
+  function lexiconIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path><path d="M8 20a3 3 0 0 1-3-3h14M12 8v6M9 11h6"></path></svg>';
   }
 })();
