@@ -2920,7 +2920,8 @@ JSON 必须严格使用以下结构：
     const clean = String(text || "").replace(/\s+/g, " ").trim();
     if (!clean) return [];
     const sentences = clean
-      .split(/(?<=[.!?。！？;；])\s*/)
+      .replace(/([.!?。！？;；])\s*/g, "$1\n")
+      .split("\n")
       .map((part) => part.trim())
       .filter(Boolean);
     const segments = [];
@@ -2929,7 +2930,11 @@ JSON 必须严格使用以下结构：
         segments.push(sentence);
         continue;
       }
-      const clauses = sentence.split(/(?<=[,，])\s*/);
+      const clauses = sentence
+        .replace(/([,，])\s*/g, "$1\n")
+        .split("\n")
+        .map((clause) => clause.trim())
+        .filter(Boolean);
       let current = "";
       for (const clause of clauses) {
         if ((current + clause).length > 120 && current) {
