@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f7f3">
+  <meta name="description" content="面向澳洲 WHV 的服务业、农场工厂和生活英语练习。">
+  <title>随说 SayFlow · 澳洲 WHV 英语</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=20261117-26">
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="随说首页">
+      <span class="brand-mark" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+      <span class="brand-copy">
+        <strong>随说</strong>
+        <small>SayFlow</small>
+      </span>
+    </a>
+
+    <nav class="top-actions" aria-label="页面操作">
+      <button class="nav-button" id="openLookupButton" type="button" aria-label="快捷查词">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5"></circle>
+          <path d="m15.5 15.5 4 4"></path>
+          <path d="M8 10.5h5M10.5 8v5"></path>
+        </svg>
+        <span>查词</span>
+      </button>
+      <button class="nav-button" id="openLexiconButton" type="button" aria-label="打开澳洲生活词库">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"></path>
+          <path d="M4 5.5v16M8 7h8M8 11h6"></path>
+        </svg>
+        <span>生活词库</span>
+      </button>
+      <button class="nav-button" id="openLibraryButton" type="button" aria-label="打开表达库">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"></path>
+          <path d="M8 20a3 3 0 0 1-3-3h14"></path>
+          <path d="M8 8h7M8 12h5"></path>
+        </svg>
+        <span>表达库</span>
+      </button>
+      <button class="icon-button" id="openSettingsButton" type="button" aria-label="打开设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.34.72.65.98.3.26.68.4 1.07.4H21v4h-.09a1.7 1.7 0 0 0-1.51.62Z"></path>
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="task-hub" aria-labelledby="taskHubTitle">
+      <div class="task-hero">
+        <div class="task-hero-copy">
+          <h1 id="taskHubTitle">澳洲 WHV 英语练习</h1>
+        </div>
+
+        <div class="progress-metrics" aria-label="学习进度概览">
+          <article>
+            <span>今天完成</span>
+            <strong id="todayCompletedStat">0</strong>
+            <small>个真实任务</small>
+          </article>
+          <article>
+            <span>本周练习</span>
+            <strong id="weekCompletedStat">0</strong>
+            <small>次主动开口</small>
+          </article>
+          <article>
+            <span>待复习</span>
+            <strong id="dueReviewStat">0</strong>
+            <small id="gapSummary">还没有记录卡点</small>
+          </article>
+        </div>
+      </div>
+
+      <div class="task-board">
+        <div class="task-board-heading">
+          <div class="scene-tabs" id="sceneTabs" role="tablist" aria-label="练习场景">
+            <button class="scene-tab active" type="button" role="tab" aria-selected="true" data-scene="hospitality">咖啡厅 / 餐馆</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="farm">农场 / 工厂</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="job">求职 / 工作</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="life">租房 / 生活</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="delivery">配送 / 跑腿</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="transport">交通 / 租车</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="travel">旅游 / 住宿</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="shopping">购物 / 办事</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="office">办公室工作</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="cashier">收银员</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="retail">Sales / 店员</button>
+            <button class="scene-tab" type="button" role="tab" aria-selected="false" data-scene="social">职场沟通</button>
+          </div>
+          <button class="text-button" id="shuffleTasksButton" type="button">换一组任务 →</button>
+        </div>
+
+        <div class="task-grid" id="taskGrid"></div>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="英语表达工作区">
+      <article class="composer-card">
+        <div class="card-heading">
+          <div>
+            <p class="section-kicker hidden" id="activeTaskKicker"></p>
+            <h2 id="composerTitle">自由输入</h2>
+          </div>
+          <button class="task-exit hidden" id="clearTaskButton" type="button">退出当前任务</button>
+        </div>
+
+        <div class="composer-field">
+          <textarea id="sourceInput" rows="4" maxlength="1000" placeholder="输入中文、英文或中英混合表达"></textarea>
+          <div class="composer-meta">
+            <span class="char-count" id="charCount">0 / 1000</span>
+          </div>
+        </div>
+
+        <div class="composer-actionbar">
+          <button class="mic-button" id="micButton" type="button" aria-label="开始语音输入">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+              <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"></path>
+            </svg>
+            <span id="micLabel">点击说话</span>
+          </button>
+
+          <div class="tone-options" id="toneOptions">
+            <button class="tone-chip active" type="button" data-tone="natural">自然</button>
+            <button class="tone-chip" type="button" data-tone="work">工作</button>
+            <button class="tone-chip" type="button" data-tone="concise">简洁</button>
+          </div>
+
+          <button class="primary-button" id="generateButton" type="button">
+            <span>生成地道表达</span>
+            <span class="arrow" aria-hidden="true">↗</span>
+          </button>
+        </div>
+
+        <div class="composer-footer">
+          <button class="prompt-refresh" id="promptRefreshButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 7v5h-5"></path>
+              <path d="M4 17v-5h5"></path>
+              <path d="M6.1 9a7 7 0 0 1 11.3-2L20 12M4 12l2.6 5a7 7 0 0 0 11.3-2"></path>
+            </svg>
+            <span>换一句</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="result-card" id="resultPanel" aria-live="polite">
+        <div class="empty-result" id="emptyResult">
+          <h2>生成结果</h2>
+          <p>选择上方任务，或在左侧输入一句要表达的内容。</p>
+          <button class="text-button" id="demoButton" type="button">查看示例 <span>→</span></button>
+        </div>
+
+        <div class="loading-result hidden" id="loadingResult">
+          <div class="loading-line wide"></div>
+          <div class="loading-line medium"></div>
+          <div class="loading-line short"></div>
+          <div class="loading-card"></div>
+          <div class="loading-card"></div>
+          <p>正在生成…</p>
+        </div>
+
+        <div class="result-content hidden" id="resultContent"></div>
+
+        <div class="error-result hidden" id="errorResult">
+          <p class="section-kicker">连接失败</p>
+          <h2>这句话还没组织出来</h2>
+          <p id="errorMessage">请检查接口配置后再试。</p>
+          <div class="error-actions">
+            <button class="secondary-button" type="button" id="errorSettingsButton">检查设置</button>
+            <button class="text-button" type="button" id="errorDemoButton">先看示例卡 →</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="library-drawer" id="libraryDrawer" aria-labelledby="libraryTitle" aria-hidden="true">
+    <div class="drawer-header">
+      <div>
+        <h2 id="libraryTitle">表达库</h2>
+      </div>
+      <button class="icon-button" id="closeLibraryButton" type="button" aria-label="关闭表达库">×</button>
+    </div>
+    <label class="search-box">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+      <input id="librarySearch" type="search" placeholder="搜索表达、短语或原句">
+    </label>
+    <div class="review-summary" id="reviewSummary"></div>
+    <div class="library-list" id="libraryList"></div>
+    <div class="drawer-footer">
+      <button class="text-button" id="exportLibraryButton" type="button">导出表达库 →</button>
+      <span>仅保存在当前浏览器</span>
+    </div>
+  </aside>
+
+  <aside class="library-drawer lexicon-drawer" id="lexiconDrawer" aria-labelledby="lexiconTitle" aria-hidden="true">
+    <div class="drawer-header">
+      <div>
+        <h2 id="lexiconTitle">澳洲生活词库</h2>
+      </div>
+      <button class="icon-button" id="closeLexiconButton" type="button" aria-label="关闭生活词库">×</button>
+    </div>
+    <label class="search-box">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+      <input id="lexiconSearch" type="search" placeholder="搜索英文、中文或场景">
+    </label>
+    <div class="lexicon-categories" id="lexiconCategories"></div>
+    <div class="lexicon-toolbar">
+      <button class="secondary-button" id="randomLexiconButton" type="button">随机 10 个</button>
+      <button class="primary-small" id="practiceLexiconButton" type="button">生成练习任务</button>
+      <button class="secondary-button" id="toggleCustomLexiconButton" type="button">新增词条</button>
+    </div>
+    <form class="custom-lexicon-form hidden" id="customLexiconForm">
+      <div class="custom-lexicon-grid">
+        <label class="field-label">
+          <span>英文</span>
+          <input id="customLexiconTerm" maxlength="80" required placeholder="例如 top up">
+        </label>
+        <label class="field-label">
+          <span>中文</span>
+          <input id="customLexiconZh" maxlength="120" required placeholder="例如 充值">
+        </label>
+        <label class="field-label">
+          <span>分类</span>
+          <select id="customLexiconCategory" required></select>
+        </label>
+      </div>
+      <label class="field-label">
+        <span>英文例句</span>
+        <input id="customLexiconExample" maxlength="220" placeholder="I need to top up my card.">
+      </label>
+      <div class="custom-lexicon-actions">
+        <span id="customLexiconStatus">保存在当前浏览器</span>
+        <button class="primary-small" type="submit">保存词条</button>
+      </div>
+    </form>
+    <div class="lexicon-list" id="lexiconList"></div>
+    <div class="drawer-footer">
+      <span id="lexiconCount">0 个词条</span>
+      <span>澳洲生活常用表达</span>
+    </div>
+  </aside>
+
+  <dialog class="settings-dialog" id="settingsDialog">
+    <form method="dialog" id="settingsForm">
+      <div class="dialog-header">
+        <div>
+          <h2>设置</h2>
+        </div>
+        <button class="icon-button" type="button" id="closeSettingsButton" aria-label="关闭设置">×</button>
+      </div>
+
+      <section class="settings-manual" id="settingsManual">
+        <div class="settings-section-heading">
+          <h3>不使用 API</h3>
+          <span>复制提示词 → 粘贴结果</span>
+        </div>
+        <label class="field-label">
+          <span>提示词</span>
+          <textarea class="manual-prompt" id="settingsPrompt" readonly></textarea>
+        </label>
+        <div class="manual-actions">
+          <button class="secondary-button" type="button" id="copyPromptButton">复制提示词</button>
+          <button class="text-button" type="button" id="openChatGPTButton">打开 ChatGPT →</button>
+        </div>
+        <label class="field-label settings-result-label">
+          <span>AI 返回结果</span>
+          <textarea class="manual-result" id="settingsResult" placeholder="粘贴完整 JSON"></textarea>
+        </label>
+        <button class="primary-small full-width" type="button" id="parseManualButton">生成学习卡</button>
+      </section>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-section-heading">
+        <h3>API 一键生成</h3>
+        <span>可选</span>
+      </div>
+
+      <label class="field-label">
+        <span>API Base URL</span>
+        <input id="endpointInput" type="url" required placeholder="https://api.openai.com/v1" autocomplete="url">
+      </label>
+      <label class="field-label">
+        <span>API Key</span>
+        <input id="apiKeyInput" type="password" placeholder="sk-...（本地模型可留空）" autocomplete="off">
+      </label>
+      <label class="field-label">
+        <span>模型名称</span>
+        <input id="modelInput" type="text" required placeholder="例如：gpt-4.1-mini">
+      </label>
+      <fieldset class="accent-field">
+        <legend>语音偏好</legend>
+        <label><input type="radio" name="accent" value="us" checked><span>美音</span></label>
+        <label><input type="radio" name="accent" value="uk"><span>英音</span></label>
+      </fieldset>
+
+      <div class="voice-settings">
+        <label class="field-label">
+          <span>系统语音</span>
+          <select id="voiceSelect" name="voiceURI">
+            <option value="">自动选择</option>
+          </select>
+        </label>
+        <label class="field-label voice-rate">
+          <span>语速</span>
+          <select id="speechRateInput" name="speechRate">
+            <option value="0.82">0.82×</option>
+            <option value="0.9">0.90×</option>
+            <option value="0.95" selected>0.95×</option>
+            <option value="1">1.00×</option>
+          </select>
+        </label>
+        <button class="secondary-button voice-test" id="testVoiceButton" type="button">试听</button>
+      </div>
+      <p class="voice-help">如果 Chrome 的系统语音仍不自然，可用 Microsoft Edge 打开本页，并选择带“在线”字样的自然语音；不需要插件或 API 费用。</p>
+      <div class="settings-tip" id="packInfo">当前学习包：澳洲 WHV</div>
+
+      <div class="dialog-actions">
+        <button class="text-button" id="clearSettingsButton" type="button">清除配置</button>
+        <button class="primary-small" type="submit">保存并开始</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="lookup-dialog" id="lookupDialog">
+    <div class="lookup-header">
+      <h2>快捷查词</h2>
+      <button class="icon-button" id="closeLookupButton" type="button" aria-label="关闭快捷查词">×</button>
+    </div>
+    <label class="lookup-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m20 20-4-4"></path>
+      </svg>
+      <input id="lookupInput" type="search" placeholder="输入英文或中文，例如 top up、押金、short-staffed" autocomplete="off">
+    </label>
+    <p class="lookup-meta" id="lookupMeta">输入至少 2 个字符，优先查本地词库</p>
+    <div class="lookup-results" id="lookupResults"></div>
+    <div class="lookup-actions">
+      <span id="lookupAiStatus">本地查询不消耗 API</span>
+      <button class="primary-small hidden" id="lookupAiButton" type="button">AI 查询</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="learningItemTemplate">
+    <article class="learning-item">
+      <div class="item-topline">
+        <span class="item-type"></span>
+        <button class="mini-action speak-item" type="button" aria-label="朗读这个表达">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 4V5L9 9H5Z"></path><path d="M17 8a5 5 0 0 1 0 8"></path></svg>
+        </button>
+      </div>
+      <h3 class="item-title"></h3>
+      <div class="phonetics"></div>
+      <p class="item-meaning"></p>
+      <div class="forms-block hidden">
+        <p class="detail-label">词族变化</p>
+        <div class="forms-grid"></div>
+      </div>
+      <div class="examples-block hidden">
+        <p class="detail-label">放到句子里</p>
+        <ul class="examples-list"></ul>
+      </div>
+    </article>
+  </template>
+
+  <script src="./pack.js?v=20261117-2" defer></script>
+  <script src="./lexicon.js?v=20261117-10" defer></script>
+  <script src="./lexicon-extra.js?v=20261117-11" defer></script>
+  <script src="./app.js?v=20261117-29" defer></script>
+</body>
+</html>
