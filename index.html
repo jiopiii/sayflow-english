@@ -13,7 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
-  <link rel="stylesheet" href="./styles.css?v=20261118-28">
+  <link rel="stylesheet" href="./styles.css?v=20261118-29">
 </head>
 <body>
   <noscript>
@@ -339,7 +339,10 @@
         </label>
         <button class="secondary-button voice-test" id="testVoiceButton" type="button">试听</button>
       </div>
-      <p class="voice-help">如果 Chrome 的系统语音仍不自然，可用 Microsoft Edge 打开本页，并选择带“在线”字样的自然语音；不需要插件或 API 费用。</p>
+      <p class="voice-help">
+        iPhone 通常只提供系统语音。下载或更新语音后，点“重新检测”；仍无声时请关闭静音开关并调高媒体音量。
+        <button class="voice-refresh" id="refreshVoicesButton" type="button">重新检测语音</button>
+      </p>
       <div class="settings-tip" id="packInfo">当前学习包：澳洲 WHV</div>
 
       <div class="dialog-actions">
@@ -431,6 +434,6 @@
   <script src="./pack.js?v=20261118-3"></script>
   <script src="./lexicon.js?v=20261118-12"></script>
   <script src="./lexicon-extra.js?v=20261118-13"></script>
-  <script src="./app.js?v=20261118-33"></script>
+  <script src="./app.js?v=20261118-34"></script>
 </body>
 </html>

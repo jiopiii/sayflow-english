@@ -952,6 +952,7 @@ JSON 必须严格使用以下结构：
     voiceSelect: document.querySelector("#voiceSelect"),
     speechRateInput: document.querySelector("#speechRateInput"),
     testVoiceButton: document.querySelector("#testVoiceButton"),
+    refreshVoicesButton: document.querySelector("#refreshVoicesButton"),
     packInfo: document.querySelector("#packInfo"),
     openLexiconButton: document.querySelector("#openLexiconButton"),
     closeLexiconButton: document.querySelector("#closeLexiconButton"),
@@ -1246,6 +1247,10 @@ JSON 必须严格使用以下结构：
         voiceURI: elements.voiceSelect.value,
         rate: elements.speechRateInput.value
       });
+    });
+    elements.refreshVoicesButton.addEventListener("click", () => {
+      populateVoiceOptions();
+      showToast("已重新检测系统语音");
     });
 
     elements.settingsForm.addEventListener("submit", (event) => {
@@ -2480,6 +2485,7 @@ JSON 必须严格使用以下结构：
         <div class="version-top">
           <span class="version-style">${escapeHtml(STYLE_LABELS[version.style] || version.style || "自然表达")}</span>
           <div class="version-actions">
+            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(version.text)}">收藏</button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(version.text)}" aria-label="朗读地道表达">
               ${speakerIcon()}
             </button>
@@ -2506,6 +2512,11 @@ JSON 必须严格使用以下结构：
         <div class="chunk-top">
           <span class="chunk-type">${escapeHtml(chunk.type)}</span>
           <div class="chunk-actions">
+            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(chunk.text)}">收藏</button>
+            <button class="mini-text-action" type="button"
+              data-save-term="${escapeAttribute(chunk.text)}"
+              data-save-meaning="${escapeAttribute(chunk.meaning || "")}"
+              data-save-example="${escapeAttribute(chunk.example || "")}">词库</button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(chunk.text)}" aria-label="朗读语块">
               ${speakerIcon()}
             </button>
@@ -2568,6 +2579,7 @@ JSON 必须严格使用以下结构：
           <p class="coach-text">${escapeHtml(currentTask.followUp)}</p>
           ${currentTask.followUpZh ? `<p class="coach-translation">${escapeHtml(currentTask.followUpZh)}</p>` : ""}
           <div class="coach-actions">
+            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(currentTask.followUp)}">收藏</button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.followUp)}" aria-label="朗读对方追问">
               ${speakerIcon()}
             </button>
@@ -2578,6 +2590,7 @@ JSON 必须严格使用以下结构：
           <p class="coach-text">${escapeHtml(currentTask.repair)}</p>
           <p class="coach-translation">先争取时间，再把对话接回来。</p>
           <div class="coach-actions">
+            <button class="mini-text-action" type="button" data-save-sentence="${escapeAttribute(currentTask.repair)}">收藏</button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.repair)}" aria-label="朗读救场表达">
               ${speakerIcon()}
             </button>
@@ -2668,9 +2681,15 @@ JSON 必须严格使用以下结构：
           <div class="item-tags">
             <span class="item-type">${escapeHtml(TYPE_LABELS[item.type] || item.type || "重点")}</span>
           </div>
-          <button class="mini-action" type="button" data-speak="${escapeAttribute(item.text)}" aria-label="朗读这个表达">
-            ${speakerIcon()}
-          </button>
+          <div class="item-actions">
+            <button class="mini-text-action" type="button"
+              data-save-term="${escapeAttribute(item.text)}"
+              data-save-meaning="${escapeAttribute(item.meaning || "")}"
+              data-save-example="${escapeAttribute(item.examples?.[0]?.en || "")}">加入词库</button>
+            <button class="mini-action" type="button" data-speak="${escapeAttribute(item.text)}" aria-label="朗读这个表达">
+              ${speakerIcon()}
+            </button>
+          </div>
         </div>
         <h3 class="item-title">${escapeHtml(item.text)}</h3>
         ${phonetics ? `<div class="phonetics">${phonetics}</div>` : ""}
@@ -2766,6 +2785,22 @@ JSON 必须严格使用以下结构：
       return;
     }
 
+    const saveSentenceButton = event.target.closest("[data-save-sentence]");
+    if (saveSentenceButton) {
+      saveSentenceToLibrary(saveSentenceButton.dataset.saveSentence);
+      return;
+    }
+
+    const saveTermButton = event.target.closest("[data-save-term]");
+    if (saveTermButton) {
+      saveTermToLexicon({
+        term: saveTermButton.dataset.saveTerm,
+        meaning: saveTermButton.dataset.saveMeaning,
+        example: saveTermButton.dataset.saveExample
+      });
+      return;
+    }
+
     const practiceMicButton = event.target.closest('[data-action="practice-mic"]');
     if (practiceMicButton) {
       togglePracticeSpeechRecognition();
@@ -2808,6 +2843,92 @@ JSON 必须严格使用以下结构：
     }
   }
 
+  function saveSentenceToLibrary(sentence) {
+    const text = cleanText(sentence);
+    if (!text) return;
+    const duplicate = getActivePackEntries().some((entry) =>
+      asArray(entry.result?.naturalVersions).some((version) =>
+        cleanText(version?.text) === text
+      )
+    );
+    if (duplicate) {
+      showToast("这句话已经在表达库里");
+      return;
+    }
+
+    entries.unshift({
+      id: createId(),
+      input: currentInput || currentResult?.original || text,
+      result: {
+        original: currentInput || currentResult?.original || text,
+        intent: currentResult?.intent || "",
+        naturalVersions: [{ style: "natural", text }],
+        expressionChunks: [],
+        learningItems: [],
+        practicePrompts: []
+      },
+      task: serializeTask(activeTask),
+      packId: PACK.id,
+      savedAt: new Date().toISOString(),
+      review: createReviewSchedule()
+    });
+    entries = limitActivePackItems(entries, 100);
+    persistEntries();
+    renderLibrary();
+    updateDashboard();
+    showToast("已收藏到表达库");
+  }
+
+  function saveTermToLexicon({ term, meaning, example }) {
+    const cleanTerm = cleanText(term);
+    if (!cleanTerm) return;
+    const normalized = normalizeMatchText(cleanTerm);
+    const duplicate = LEXICON.some((entry) =>
+      normalizeMatchText(entry.term) === normalized
+    );
+    if (duplicate) {
+      showToast("词库里已经有这个表达");
+      return;
+    }
+
+    const category = getLexiconCategoryForScene(activeTask?.scene);
+    const cleanMeaning = cleanText(meaning) ||
+      `来自${SCENE_LABELS[activeTask?.scene] || "本次练习"}场景的重点表达`;
+    customLexicon.unshift({
+      id: `custom-${createId()}`,
+      packId: PACK.id,
+      custom: true,
+      term: cleanTerm,
+      category,
+      kind: /\s|-/.test(cleanTerm) ? "phrase" : "word",
+      zh: cleanMeaning,
+      example: cleanText(example),
+      aliases: [],
+      zhTriggers: [cleanMeaning]
+    });
+    persistCustomLexicon();
+    rebuildLexicon();
+    showToast("已加入生活词库");
+  }
+
+  function getLexiconCategoryForScene(scene) {
+    const sceneToCategory = {
+      hospitality: "cafe",
+      farm: "work",
+      job: "work",
+      life: "daily",
+      delivery: "transport",
+      transport: "transport",
+      travel: "daily",
+      shopping: "shopping",
+      office: "office",
+      cashier: "retail",
+      retail: "retail",
+      social: "work"
+    };
+    return sceneToCategory[scene] || "daily";
+  }
+
   function setupVoiceOptions() {
     if (!("speechSynthesis" in window)) {
       elements.voiceSelect.disabled = true;
@@ -2822,7 +2943,7 @@ JSON 必须严格使用以下结构：
     if (!("speechSynthesis" in window)) return;
     const voices = window.speechSynthesis
       .getVoices()
-      .filter((voice) => /^en[-_](US|GB)/i.test(voice.lang) && !NOVELTY_VOICES.has(voice.name))
+      .filter((voice) => /^en(?:[-_]|$)/i.test(voice.lang) && !NOVELTY_VOICES.has(voice.name))
       .sort((left, right) => {
         const leftUs = /^en[-_]US/i.test(left.lang) ? 0 : 1;
         const rightUs = /^en[-_]US/i.test(right.lang) ? 0 : 1;
@@ -2850,18 +2971,10 @@ JSON 必须严格使用以下结构：
   }
 
   function getPreferredVoice(lang, voiceURI = settings.voiceURI) {
+    if (!voiceURI) return null;
     const voices = window.speechSynthesis.getVoices();
-    if (voiceURI) {
-      const selected = voices.find((voice) => voice.voiceURI === voiceURI);
-      if (selected && selected.lang.replace("_", "-") === lang) return selected;
-    }
-    const matching = voices.filter((voice) => voice.lang.replace("_", "-") === lang);
-    const preferredNames = PREFERRED_VOICES[lang] || PREFERRED_VOICES["en-US"];
-    for (const name of preferredNames) {
-      const voice = matching.find((item) => item.name.includes(name));
-      if (voice) return voice;
-    }
-    return matching.find((voice) => voice.localService) || matching[0] || null;
+    const selected = voices.find((voice) => voice.voiceURI === voiceURI);
+    return selected && /^en(?:[-_]|$)/i.test(selected.lang) ? selected : null;
   }
 
   function speakText(text, overrides = {}) {
