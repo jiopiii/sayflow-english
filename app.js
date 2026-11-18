@@ -2872,8 +2872,9 @@ JSON 必须严格使用以下结构：
     const runId = ++speechRunId;
     window.clearInterval(speechWatchdog);
     activeSpeechUtterances = [];
-    window.speechSynthesis.cancel();
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    const speech = window.speechSynthesis;
+    if (speech.speaking || speech.pending) speech.cancel();
+    if (speech.paused) speech.resume();
     const accent = overrides.accent || settings.accent;
     const lang = accent === "uk" ? "en-GB" : "en-US";
     const voiceURI = Object.prototype.hasOwnProperty.call(overrides, "voiceURI")
@@ -2906,8 +2907,13 @@ JSON 必须严格使用以下结构：
         window.setTimeout(speakNext, 160);
       };
       utterance.onend = finishSegment;
-      utterance.onerror = finishSegment;
-      window.speechSynthesis.speak(utterance);
+      utterance.onerror = (event) => {
+        if (runId === speechRunId && !["interrupted", "canceled"].includes(event.error)) {
+          showToast("系统语音未能播放，请检查 iPhone 静音开关和语音设置");
+        }
+        finishSegment();
+      };
+      speech.speak(utterance);
     };
 
     speechWatchdog = window.setInterval(() => {
