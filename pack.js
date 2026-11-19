@@ -5,8 +5,8 @@ window.SAYFLOW_PACK = {
   sourceLanguage: "zh-CN",
   locale: "en-AU",
   speechLanguage: "en-US",
-  schemaVersion: 2,
-  contentVersion: "1.1.0",
+  schemaVersion: 3,
+  contentVersion: "1.2.0",
   storageNamespace: "sayflow",
   expected: {
     scenes: 12,

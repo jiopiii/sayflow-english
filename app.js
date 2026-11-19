@@ -2,7 +2,7 @@
   "use strict";
 
   const PACK_SOURCE = window.SAYFLOW_PACK || null;
-  const PACK_SCHEMA_VERSION = 2;
+  const PACK_SCHEMA_VERSION = 3;
   const LEGACY_PACK_ID = "en-AU-whv";
   const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.1.0",
+    contentVersion: "1.2.0",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -749,7 +749,10 @@
 - 语块要能在其他场景重复使用；词组不要把整句当词组，也不要重复语块。
 - 音标不确定时写“暂无”；按用户偏好给 US 或 UK 音标。
 - word_family 和 phrase_variations 只保留真实、可复用的关系，不列第三人称单数、过去式等屈折形式。
-- memory_trick 能连到拼写或读音才写；想不出就留空，不要硬编。每个单词或词组给 1 个例句即可。
+- memory_trick 能连到拼写或读音才写；想不出就留空，不要硬编。
+- 重点单词先给出当前语境下的中文含义，再列出该词在当代常见英语中的全部常用义项；合并近义释义，排除生僻、古旧和与该词不匹配的义项，不为了凑数量编造。
+- 每个义项必须标明词性和中文释义，并各给 1 个能体现该义项的英文例句和中文翻译。当前语境对应的义项必须标记 in_context: true，且只能标记一个。
+- 重点词组仍只需给出当前语境含义和 1 个例句。
 - 不输出 Markdown，不输出解释文字，只输出一个合法 JSON 对象。
 
 JSON 必须严格使用以下结构：
@@ -777,15 +780,21 @@ JSON 必须严格使用以下结构：
       "ipa_us": "美音音标或暂无",
       "ipa_uk": "英音音标或暂无",
       "meaning": "当前语境下的中文含义",
+      "senses": [
+        {
+          "pos": "名词 | 动词 | 形容词 | 副词 | 介词 | 连词等",
+          "zh": "该词性的一个常用中文释义",
+          "example": { "en": "体现这个义项的英文例句", "zh": "例句中文翻译" },
+          "in_context": true
+        }
+      ],
       "memory_method": "split | sound | pun | association",
       "memory_trick": "一条能拆到拼写或读音的记忆法",
       "word_family": [
         { "label": "动词", "value": "implement" },
         { "label": "名词", "value": "implementation" }
       ],
-      "examples": [
-        { "en": "英文例句", "zh": "中文意思" }
-      ]
+      "examples": []
     }
   ],
   "key_phrases": [
@@ -896,6 +905,55 @@ JSON 必须严格使用以下结构：
             zh: "这个酱汁含坚果吗？"
           }
         ]
+      },
+      {
+        type: "word",
+        text: "contain",
+        level: "B1",
+        ipaUs: "/kənˈteɪn/",
+        ipaUk: "/kənˈteɪn/",
+        meaning: "含有；包含某种成分",
+        memoryMethod: "split",
+        memoryTrick: "con- 有“一起”的感觉，-tain 来自 hold，像把东西一起装在里面。",
+        forms: [
+          { label: "名词", value: "container" }
+        ],
+        senses: [
+          {
+            pos: "动词",
+            zh: "含有；包含某种成分",
+            examples: [
+              {
+                en: "Does this breakfast contain any nuts?",
+                zh: "这份早餐含坚果吗？"
+              }
+            ],
+            inContext: true
+          },
+          {
+            pos: "动词",
+            zh: "容纳；装得下",
+            examples: [
+              {
+                en: "This box can contain up to twenty cups.",
+                zh: "这个箱子最多能装二十个杯子。"
+              }
+            ],
+            inContext: false
+          },
+          {
+            pos: "动词",
+            zh: "控制；抑制情绪",
+            examples: [
+              {
+                en: "She could hardly contain her excitement.",
+                zh: "她几乎控制不住自己的兴奋。"
+              }
+            ],
+            inContext: false
+          }
+        ],
+        examples: []
       }
     ],
     practicePrompts: [
@@ -1301,6 +1359,11 @@ JSON 必须严格使用以下结构：
       if (event.target === elements.lookupDialog) closeLookup();
     });
     elements.lookupResults.addEventListener("click", (event) => {
+      const exampleSpeakButton = event.target.closest("[data-lookup-example-speak]");
+      if (exampleSpeakButton) {
+        speakText(exampleSpeakButton.dataset.lookupExampleSpeak);
+        return;
+      }
       const speakButton = event.target.closest("[data-lookup-speak]");
       if (speakButton) {
         speakText(speakButton.dataset.lookupSpeak);
@@ -1417,7 +1480,14 @@ JSON 必须严格使用以下结构：
           </span>
         </div>
         <p class="lookup-result-zh">${escapeHtml(entry.zh)}</p>
-        ${entry.example ? `<p class="lookup-result-example">${escapeHtml(entry.example)}</p>` : ""}
+        ${entry.example ? `
+          <div class="lookup-result-example-row">
+            <p class="lookup-result-example">${escapeHtml(entry.example)}</p>
+            <button class="mini-action example-speak" type="button" data-lookup-example-speak="${escapeAttribute(entry.example)}" aria-label="朗读例句" title="朗读例句">
+              ${speakerIcon()}
+            </button>
+          </div>
+        ` : ""}
         <div class="lookup-result-actions">
           <button class="lexicon-action" type="button" data-lookup-speak="${escapeAttribute(entry.term)}">朗读</button>
           <button class="lexicon-action" type="button" data-lookup-copy="${escapeAttribute(entry.term)}">复制</button>
@@ -1544,6 +1614,11 @@ JSON 必须严格使用以下结构：
       addCustomLexiconEntry();
     });
     elements.lexiconList.addEventListener("click", (event) => {
+      const exampleSpeakButton = event.target.closest("[data-lexicon-example-speak]");
+      if (exampleSpeakButton) {
+        speakText(exampleSpeakButton.dataset.lexiconExampleSpeak);
+        return;
+      }
       const speakButton = event.target.closest("[data-lexicon-speak]");
       if (speakButton) {
         speakText(speakButton.dataset.lexiconSpeak);
@@ -1795,7 +1870,14 @@ JSON 必须严格使用以下结构：
             </div>
           </div>
           <p class="lexicon-zh">${escapeHtml(entry.zh)}</p>
-          <p class="lexicon-example">${escapeHtml(entry.example)}</p>
+          ${entry.example ? `
+            <div class="lexicon-example-row">
+              <p class="lexicon-example">${escapeHtml(entry.example)}</p>
+              <button class="mini-action lexicon-example-speak" type="button" data-lexicon-example-speak="${escapeAttribute(entry.example)}" aria-label="朗读例句" title="朗读例句">
+                ${speakerIcon()}
+              </button>
+            </div>
+          ` : ""}
         </article>
       `;
     }).join("") + (entries.length > visibleEntries.length
@@ -1818,6 +1900,11 @@ JSON 必须严格使用以下结构：
 
   function bindLibrary() {
     elements.libraryList.addEventListener("click", (event) => {
+      const speakButton = event.target.closest("[data-library-speak]");
+      if (speakButton) {
+        speakText(speakButton.dataset.librarySpeak);
+        return;
+      }
       const reviewButton = event.target.closest("[data-review-id]");
       if (reviewButton) {
         const entry = getActivePackEntries()
@@ -2136,7 +2223,7 @@ JSON 必须严格使用以下结构：
       const content = await requestChatCompletion([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input, activeTone) }
-      ], { temperature: 0.4, maxTokens: 2400, timeoutMs: 45000 });
+      ], { temperature: 0.4, maxTokens: 3600, timeoutMs: 60000 });
       const parsed = parseModelJson(content);
       currentResult = normalizeModelData(parsed, input);
       showState("content");
@@ -2150,7 +2237,7 @@ JSON 必须严格使用以下结构：
 
   async function requestChatCompletion(messages, options = {}) {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs || 45000);
+    const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs || 60000);
     try {
       const requestBody = {
         model: settings.model,
@@ -2190,7 +2277,7 @@ JSON 必须严格使用以下结构：
       throw new Error("接口返回成功，但 choices 中没有可读取的正文。请检查接口是否为兼容 Chat Completions 的服务。");
     } catch (error) {
       if (error.name === "AbortError") {
-        throw new Error("接口超过 45 秒仍未返回，请稍后重试或更换更快的模型。");
+        throw new Error("接口超过 60 秒仍未返回，请稍后重试或更换更快的模型。");
       }
       throw error;
     } finally {
@@ -2399,7 +2486,15 @@ JSON 必须严格使用以下结构：
         forms: entry.aliases?.length
           ? [{ label: "常见变体", value: entry.aliases.join(" / ") }]
           : [],
-        examples: entry.example ? [{ en: entry.example, zh: "" }] : []
+        examples: entry.example ? [{ en: entry.example, zh: "" }] : [],
+        senses: entry.kind === "word" || entry.kind === "place"
+          ? [{
+              pos: "",
+              zh: entry.zh,
+              examples: entry.example ? [{ en: entry.example, zh: "" }] : [],
+              inContext: true
+            }]
+          : []
       });
     }
 
@@ -2437,6 +2532,8 @@ JSON 必须严格使用以下结构：
   function normalizeLearningItemData(item, forcedType = "") {
     const sourceType = cleanText(item?.type).toLowerCase();
     const type = forcedType || (/(phrase|collocation|pattern|idiom)/.test(sourceType) ? "phrase" : "word");
+    const meaning = cleanText(item?.meaning || item?.meaning_in_context || item?.definition);
+    const examples = normalizeExamples(item?.examples);
     return {
       type,
       text: cleanText(item?.word || item?.phrase || item?.text),
@@ -2444,15 +2541,69 @@ JSON 必须严格使用以下结构：
       ipa: cleanText(item?.ipa || item?.phonetic),
       ipaUs: cleanText(item?.ipa_us || item?.ipaUs || item?.phonetic_us),
       ipaUk: cleanText(item?.ipa_uk || item?.ipaUk || item?.phonetic_uk),
-      meaning: cleanText(item?.meaning || item?.meaning_in_context || item?.definition),
+      meaning,
       memoryMethod: cleanText(item?.memory_method || item?.memoryMethod || item?.mnemonic_type).toLowerCase(),
       memoryTrick: cleanText(item?.memory_trick || item?.memoryTrick || item?.mnemonic),
       forms: normalizeForms(
         item?.phrase_variations || item?.variations || item?.patterns || item?.collocations ||
         item?.word_family || item?.forms || item?.word_forms
       ),
-      examples: normalizeExamples(item?.examples)
+      examples,
+      senses: type === "word" ? normalizeWordSenses(item, examples, meaning) : []
     };
+  }
+
+  function normalizeWordSenses(item, fallbackExamples = [], currentMeaning = "") {
+    const rawSenses = item?.senses || item?.meanings || item?.definitions || item?.all_meanings;
+    const senses = asArray(rawSenses)
+      .map((sense, index) => {
+        if (typeof sense === "string") {
+          return {
+            pos: "",
+            zh: cleanText(sense),
+            examples: [],
+            inContext: false
+          };
+        }
+        const ownExamples = normalizeExamples(
+          sense?.examples ||
+          [sense?.example, sense?.example_zh ? { en: sense?.example, zh: sense.example_zh } : ""]
+        );
+        const examples = ownExamples.length
+          ? ownExamples
+          : fallbackExamples[index] ? [fallbackExamples[index]] : [];
+        return {
+          pos: cleanText(sense?.pos || sense?.part_of_speech || sense?.type),
+          zh: cleanText(sense?.zh || sense?.meaning || sense?.definition || sense?.translation),
+          examples,
+          inContext: sense?.in_context === true || sense?.inContext === true ||
+            sense?.context === true || sense?.current_context === true
+        };
+      })
+      .filter((sense) => sense.zh)
+      .slice(0, 8);
+
+    if (!senses.length && currentMeaning) {
+      senses.push({
+        pos: "",
+        zh: currentMeaning,
+        examples: fallbackExamples.slice(0, 3),
+        inContext: true
+      });
+    }
+    if (!senses.length) return [];
+
+    let contextIndex = senses.findIndex((sense) => sense.inContext);
+    if (contextIndex === -1 && currentMeaning) {
+      contextIndex = senses.findIndex((sense) =>
+        sense.zh.includes(currentMeaning) || currentMeaning.includes(sense.zh)
+      );
+    }
+    if (contextIndex === -1) contextIndex = 0;
+    return senses.map((sense, index) => ({
+      ...sense,
+      inContext: index === contextIndex
+    }));
   }
 
   function isAdvancedLearningItem(item) {
@@ -2574,7 +2725,12 @@ JSON 必须严格使用以下结构：
         </div>
         <strong class="chunk-text">${escapeHtml(chunk.text)}</strong>
         ${chunk.meaning ? `<p class="chunk-meaning">${escapeHtml(chunk.meaning)}</p>` : ""}
-        ${chunk.example ? `<p class="chunk-example">${escapeHtml(chunk.example)}</p>` : ""}
+        ${chunk.example ? `
+          <div class="chunk-example-row">
+            <p class="chunk-example">${escapeHtml(chunk.example)}</p>
+            ${exampleSpeakButton(chunk.example)}
+          </div>
+        ` : ""}
       </article>
     `).join("");
 
@@ -2702,7 +2858,28 @@ JSON 必须严格使用以下结构：
     showState("content");
   }
 
+  function exampleSpeakButton(text, label = "朗读例句") {
+    return `
+      <button class="mini-action example-speak" type="button" data-speak="${escapeAttribute(text)}" aria-label="${escapeAttribute(label)}" title="${escapeAttribute(label)}">
+        ${speakerIcon()}
+      </button>
+    `;
+  }
+
+  function renderLearningExample(example) {
+    return `
+      <div class="example-line">
+        <div class="example-copy">
+          <span class="example-en">${escapeHtml(example.en)}</span>
+          ${example.zh ? `<span class="example-zh">${escapeHtml(example.zh)}</span>` : ""}
+        </div>
+        ${exampleSpeakButton(example.en)}
+      </div>
+    `;
+  }
+
   function renderLearningItem(item) {
+    const itemExamples = asArray(item.examples);
     const phonetics = item.type !== "word" && item.ipa
       ? `<span class="phonetic-chip">IPA ${escapeHtml(item.ipa)}</span>`
       : [
@@ -2717,12 +2894,47 @@ JSON 必须严格使用以下结构：
       </div>
     `).join("");
 
-    const examples = item.examples.map((example) => `
-      <li>
-        <span class="example-en">${escapeHtml(example.en)}</span>
-        ${example.zh ? `<span class="example-zh">${escapeHtml(example.zh)}</span>` : ""}
-      </li>
-    `).join("");
+    const senses = item.type === "word"
+      ? normalizeWordSenses(item, itemExamples, item.meaning || "")
+      : [];
+    const contextSense = senses.find((sense) => sense.inContext) || senses[0] || null;
+    const otherSenses = senses.filter((sense) => sense !== contextSense);
+    const contextExamples = contextSense?.examples?.length
+      ? contextSense.examples
+      : itemExamples;
+    const contextHtml = item.type === "word" ? `
+      <div class="word-context">
+        <p class="detail-label">当前语境</p>
+        <div class="context-sense">
+          ${contextSense?.pos ? `<span class="sense-pos">${escapeHtml(contextSense.pos)}</span>` : ""}
+          <p class="context-meaning">${escapeHtml(item.meaning || contextSense?.zh || "")}</p>
+        </div>
+        ${contextExamples.length ? `
+          <div class="context-examples">
+            ${contextExamples.map((example) => renderLearningExample(example)).join("")}
+          </div>
+        ` : ""}
+      </div>
+    ` : item.meaning ? `<p class="item-meaning">${escapeHtml(item.meaning)}</p>` : "";
+    const otherSensesHtml = otherSenses.length ? `
+      <div class="senses-block">
+        <p class="detail-label">其他常用义</p>
+        <ol class="senses-list">
+          ${otherSenses.map((sense) => `
+            <li class="sense-item">
+              <div class="sense-heading">
+                ${sense.pos ? `<span class="sense-pos">${escapeHtml(sense.pos)}</span>` : ""}
+                <span class="sense-meaning">${escapeHtml(sense.zh)}</span>
+              </div>
+              ${sense.examples.length ? sense.examples.map((example) => renderLearningExample(example)).join("") : ""}
+            </li>
+          `).join("")}
+        </ol>
+      </div>
+    ` : "";
+    const phraseExamples = item.type !== "word"
+      ? itemExamples.map((example) => `<li>${renderLearningExample(example)}</li>`).join("")
+      : "";
     const memoryLabel = MEMORY_METHOD_LABELS[item.memoryMethod] || "记忆一下";
     const formsLabel = item.type !== "word" ? "常见变形与搭配" : "词族变化";
 
@@ -2736,7 +2948,7 @@ JSON 必须严格使用以下结构：
             <button class="mini-action" type="button" aria-label="加入词库" title="加入词库"
               data-save-term="${escapeAttribute(item.text)}"
               data-save-meaning="${escapeAttribute(item.meaning || "")}"
-              data-save-example="${escapeAttribute(item.examples?.[0]?.en || "")}">
+              data-save-example="${escapeAttribute(itemExamples[0]?.en || "")}">
               ${lexiconIcon()}
             </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(item.text)}" aria-label="朗读这个表达">
@@ -2746,7 +2958,7 @@ JSON 必须严格使用以下结构：
         </div>
         <h3 class="item-title">${escapeHtml(item.text)}</h3>
         ${phonetics ? `<div class="phonetics">${phonetics}</div>` : ""}
-        ${item.meaning ? `<p class="item-meaning">${escapeHtml(item.meaning)}</p>` : ""}
+        ${contextHtml}
         ${item.memoryTrick ? `
           <aside class="memory-trick">
             <p class="memory-trick-label"><span aria-hidden="true">✦</span> ${memoryLabel}</p>
@@ -2759,12 +2971,13 @@ JSON 必须严格使用以下结构：
             <div class="forms-grid">${forms}</div>
           </div>
         ` : ""}
-        ${examples ? `
+        ${phraseExamples ? `
           <div class="examples-block">
             <p class="detail-label">例句</p>
-            <ul class="examples-list">${examples}</ul>
+            <ul class="examples-list">${phraseExamples}</ul>
           </div>
         ` : ""}
+        ${otherSensesHtml}
       </article>
     `;
   }
@@ -3220,12 +3433,26 @@ JSON 必须严格使用以下结构：
           memoryMethod: item.memoryMethod,
           memoryTrick: item.memoryTrick,
           forms: normalizeForms(item.forms),
-          examples: asArray(item.examples)
+          examples: asArray(item.examples),
+          senses: asArray(item.senses)
         }));
       if (JSON.stringify(previousItems) !== JSON.stringify(advancedItems)) changed = true;
       const expressionChunks = normalizeExpressionChunks(previousChunks);
       if (JSON.stringify(previousChunks) !== JSON.stringify(expressionChunks)) changed = true;
       if (!entry.review) changed = true;
+      const normalizedAdvancedItems = advancedItems.map((item) => {
+        const itemExamples = normalizeExamples(item.examples);
+        return {
+          ...item,
+          examples: itemExamples,
+          senses: item.type === "word"
+            ? normalizeWordSenses(item, itemExamples, item.meaning)
+            : []
+        };
+      });
+      if (advancedItems.some((item, index) =>
+        JSON.stringify(item.senses || []) !== JSON.stringify(normalizedAdvancedItems[index].senses)
+      )) changed = true;
       return {
         ...entry,
         packId,
@@ -3239,7 +3466,7 @@ JSON 必须严格使用以下结构：
             text: version.text
           })),
           expressionChunks,
-          learningItems: advancedItems,
+          learningItems: normalizedAdvancedItems,
           practicePrompts: asArray(entry.result.practicePrompts).slice(0, 2)
         }
       };
@@ -3293,7 +3520,14 @@ JSON 必须严格使用以下结构：
             <span class="review-state ${due ? "due" : ""}">
               ${due ? "今天该复习" : `下次 ${formatReviewDate(review.dueAt)}`}
             </span>
-            <button class="review-button" type="button" data-review-id="${escapeAttribute(entry.id)}">现在重练</button>
+            <div class="library-entry-actions">
+              ${firstVersion ? `
+                <button class="mini-action" type="button" data-library-speak="${escapeAttribute(firstVersion)}" aria-label="朗读表达" title="朗读表达">
+                  ${speakerIcon()}
+                </button>
+              ` : ""}
+              <button class="review-button" type="button" data-review-id="${escapeAttribute(entry.id)}">现在重练</button>
+            </div>
           </div>
         </article>
       `;

@@ -1236,12 +1236,24 @@ textarea:focus-visible {
 }
 
 .chunk-example {
-  margin: 9px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid rgba(49, 84, 62, 0.08);
+  margin: 0;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.5;
+}
+
+.chunk-example-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(49, 84, 62, 0.08);
+}
+
+.chunk-example-row .chunk-example {
+  flex: 1;
+  min-width: 0;
 }
 
 .coach-panel {
@@ -1630,6 +1642,64 @@ textarea:focus-visible {
   line-height: 1.67;
 }
 
+.word-context {
+  margin-top: 4px;
+}
+
+.context-sense,
+.sense-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.context-meaning {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sense-pos {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(220, 239, 230, 0.86);
+  font-size: 8px;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.context-examples {
+  margin-top: 8px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(220, 239, 230, 0.32);
+}
+
+.senses-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sense-item {
+  padding: 10px 0;
+  border-top: 1px solid rgba(49, 84, 62, 0.08);
+}
+
+.sense-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sense-meaning {
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .memory-trick {
   margin-top: 12px;
   padding: 11px 13px 12px;
@@ -1727,6 +1797,28 @@ textarea:focus-visible {
 
 .examples-list li:first-child {
   border-top: 0;
+}
+
+.example-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.example-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.example-speak {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.example-speak svg {
+  width: 13px;
+  height: 13px;
 }
 
 .example-en {
@@ -2045,6 +2137,17 @@ textarea:focus-visible {
   padding: 0 15px 12px;
 }
 
+.library-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.library-entry-actions .mini-action {
+  width: 24px;
+  height: 24px;
+}
+
 .review-state {
   color: var(--muted);
   font-size: 9px;
@@ -2238,16 +2341,39 @@ textarea:focus-visible {
 }
 
 .lexicon-example {
-  margin: 6px 0 0;
-  padding-top: 6px;
+  min-width: 0;
+  margin: 0;
   overflow: hidden;
-  border-top: 1px solid rgba(49, 84, 62, 0.08);
   color: var(--muted);
   font-family: var(--serif);
   font-size: 11px;
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lexicon-example-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(49, 84, 62, 0.08);
+}
+
+.lexicon-example-row .lexicon-example {
+  flex: 1;
+}
+
+.lexicon-example-speak {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.lexicon-example-speak svg {
+  width: 12px;
+  height: 12px;
 }
 
 .lexicon-actions {
@@ -2426,10 +2552,19 @@ textarea:focus-visible {
 }
 
 .lookup-result-example {
-  margin: 7px 0 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   color: var(--muted);
   font-family: var(--serif);
   font-size: 11px;
+}
+
+.lookup-result-example-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 7px;
 }
 
 .lookup-result-actions {
