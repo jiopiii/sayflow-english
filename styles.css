@@ -1709,6 +1709,20 @@ textarea:focus-visible {
   background: rgba(255, 247, 239, 0.92);
 }
 
+.memory-trick + .memory-trick {
+  margin-top: 7px;
+}
+
+.memory-trick.homophone {
+  border-color: rgba(49, 125, 84, 0.18);
+  border-left-color: var(--green);
+  background: rgba(232, 246, 238, 0.88);
+}
+
+.memory-trick.homophone .memory-trick-label {
+  color: var(--green);
+}
+
 .memory-trick-label {
   display: flex;
   align-items: center;

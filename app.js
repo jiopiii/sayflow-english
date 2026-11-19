@@ -2,7 +2,7 @@
   "use strict";
 
   const PACK_SOURCE = window.SAYFLOW_PACK || null;
-  const PACK_SCHEMA_VERSION = 3;
+  const PACK_SCHEMA_VERSION = 4;
   const LEGACY_PACK_ID = "en-AU-whv";
   const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.2.0",
+    contentVersion: "1.3.0",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -77,6 +77,56 @@
     grammar: "句式",
     pattern: "表达模式",
     idiom: "习惯表达"
+  };
+
+  const POS_ABBREVIATIONS = {
+    n: "n.",
+    noun: "n.",
+    nouns: "n.",
+    名词: "n.",
+    v: "v.",
+    verb: "v.",
+    verbs: "v.",
+    动词: "v.",
+    adj: "adj.",
+    adjective: "adj.",
+    adjectives: "adj.",
+    形容词: "adj.",
+    adv: "adv.",
+    adverb: "adv.",
+    adverbs: "adv.",
+    副词: "adv.",
+    prep: "prep.",
+    preposition: "prep.",
+    介词: "prep.",
+    conj: "conj.",
+    conjunction: "conj.",
+    连词: "conj.",
+    pron: "pron.",
+    pronoun: "pron.",
+    代词: "pron.",
+    interj: "interj.",
+    interjection: "interj.",
+    感叹词: "interj.",
+    叹词: "interj.",
+    num: "num.",
+    numeral: "num.",
+    数词: "num.",
+    art: "art.",
+    article: "art.",
+    冠词: "art.",
+    aux: "aux.",
+    auxiliary: "aux.",
+    助动词: "aux.",
+    modal: "modal v.",
+    情态动词: "modal v.",
+    phr: "phr.",
+    phrase: "phr.",
+    词组: "phr.",
+    短语: "phr.",
+    动词短语: "phr. v.",
+    名词短语: "phr. n.",
+    形容词短语: "phr. adj."
   };
 
   const STYLE_LABELS = {
@@ -749,7 +799,8 @@
 - 语块要能在其他场景重复使用；词组不要把整句当词组，也不要重复语块。
 - 音标不确定时写“暂无”；按用户偏好给 US 或 UK 音标。
 - word_family 和 phrase_variations 只保留真实、可复用的关系，不列第三人称单数、过去式等屈折形式。
-- memory_trick 能连到拼写或读音才写；想不出就留空，不要硬编。
+- memory_trick 只写拆词、词根或语义联想；另写 homophone_trick（自然中文谐音→词义，如 happy→嗨皮，玩嗨了所以高兴；无自然关联则留空）。
+- 单词和义项词性只写 n./v./adj./adv. 等缩写，不写中文词性。
 - 重点单词先给出当前语境下的中文含义，再列出该词在当代常见英语中的全部常用义项；合并近义释义，排除生僻、古旧和与该词不匹配的义项，不为了凑数量编造。
 - 每个义项必须标明词性和中文释义，并各给 1 个能体现该义项的英文例句和中文翻译。当前语境对应的义项必须标记 in_context: true，且只能标记一个。
 - 重点词组仍只需给出当前语境含义和 1 个例句。
@@ -782,19 +833,18 @@ JSON 必须严格使用以下结构：
       "meaning": "当前语境下的中文含义",
       "senses": [
         {
-          "pos": "名词 | 动词 | 形容词 | 副词 | 介词 | 连词等",
+          "pos": "n. | v. | adj. | adv. | prep. | conj. | pron. | interj.",
           "zh": "该词性的一个常用中文释义",
           "example": { "en": "体现这个义项的英文例句", "zh": "例句中文翻译" },
           "in_context": true
         }
       ],
-      "memory_method": "split | sound | pun | association",
-      "memory_trick": "一条能拆到拼写或读音的记忆法",
+      "homophone_trick": "中文谐音→词义；无则空",
+      "memory_trick": "拆词、词根或语义联想",
       "word_family": [
-        { "label": "动词", "value": "implement" },
-        { "label": "名词", "value": "implementation" }
-      ],
-      "examples": []
+        { "label": "v.", "value": "implement" },
+        { "label": "n.", "value": "implementation" }
+      ]
     }
   ],
   "key_phrases": [
@@ -877,7 +927,7 @@ JSON 必须严格使用以下结构：
         memoryMethod: "association",
         memoryTrick: "take away 就是把食物从店里带到外面。",
         forms: [
-          { label: "相关表达", value: "takeaway（名词）" },
+          { label: "相关表达", value: "takeaway (n.)" },
           { label: "替换表达", value: "to go（美式）" }
         ],
         examples: [
@@ -915,12 +965,13 @@ JSON 必须严格使用以下结构：
         meaning: "含有；包含某种成分",
         memoryMethod: "split",
         memoryTrick: "con- 有“一起”的感觉，-tain 来自 hold，像把东西一起装在里面。",
+        homophoneTrick: "谐音“肯填”：盒子肯不肯填得下，就是能不能 contain（容纳、包含）。",
         forms: [
-          { label: "名词", value: "container" }
+          { label: "n.", value: "container" }
         ],
         senses: [
           {
-            pos: "动词",
+            pos: "v.",
             zh: "含有；包含某种成分",
             examples: [
               {
@@ -931,7 +982,7 @@ JSON 必须严格使用以下结构：
             inContext: true
           },
           {
-            pos: "动词",
+            pos: "v.",
             zh: "容纳；装得下",
             examples: [
               {
@@ -942,7 +993,7 @@ JSON 必须严格使用以下结构：
             inContext: false
           },
           {
-            pos: "动词",
+            pos: "v.",
             zh: "控制；抑制情绪",
             examples: [
               {
@@ -2544,6 +2595,7 @@ JSON 必须严格使用以下结构：
       meaning,
       memoryMethod: cleanText(item?.memory_method || item?.memoryMethod || item?.mnemonic_type).toLowerCase(),
       memoryTrick: cleanText(item?.memory_trick || item?.memoryTrick || item?.mnemonic),
+      homophoneTrick: cleanText(item?.homophone_trick || item?.homophoneTrick || item?.sound_trick),
       forms: normalizeForms(
         item?.phrase_variations || item?.variations || item?.patterns || item?.collocations ||
         item?.word_family || item?.forms || item?.word_forms
@@ -2573,7 +2625,7 @@ JSON 必须严格使用以下结构：
           ? ownExamples
           : fallbackExamples[index] ? [fallbackExamples[index]] : [];
         return {
-          pos: cleanText(sense?.pos || sense?.part_of_speech || sense?.type),
+          pos: normalizePartOfSpeech(sense?.pos || sense?.part_of_speech || sense?.type),
           zh: cleanText(sense?.zh || sense?.meaning || sense?.definition || sense?.translation),
           examples,
           inContext: sense?.in_context === true || sense?.inContext === true ||
@@ -2632,25 +2684,50 @@ JSON 必须严格使用以下结构：
     return false;
   }
 
+  function normalizePartOfSpeech(value) {
+    const raw = cleanText(value);
+    if (!raw) return "";
+    const direct = POS_ABBREVIATIONS[raw.toLowerCase().replace(/[.。]/g, "").trim()];
+    if (direct) return direct;
+    const parts = raw
+      .split(/\s*(?:\/|,|，|、|;|；|\+|\band\b)\s*/i)
+      .map((part) => part.toLowerCase().replace(/[.。]/g, "").replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const mapped = parts.map((part) => POS_ABBREVIATIONS[part]).filter(Boolean);
+    return mapped.length && mapped.length === parts.length
+      ? [...new Set(mapped)].join(" / ")
+      : "";
+  }
+
   function normalizeForms(forms) {
     const usableFamilyLabels = /名词|动词|形容词|副词|反义词|近义词|词根|派生|常见变形|常见搭配|相关表达|替换表达|反义表达|适用句型|用法|noun|verb|adjective|adverb|antonym|synonym|root|derivative|variation|collocation|expression|pattern/i;
     if (Array.isArray(forms)) {
       return forms
         .map((form) => {
           if (typeof form === "string") return { label: "派生词", value: form };
+          const label = cleanText(form?.label || form?.name || form?.type);
+          const normalizedLabel = normalizePartOfSpeech(label) ||
+            (usableFamilyLabels.test(label) ? label : "");
           return {
-            label: cleanText(form?.label || form?.name || form?.type),
+            label: normalizedLabel,
             value: cleanText(form?.value || form?.form || form?.word)
           };
         })
-        .filter((form) => form.label && form.value && usableFamilyLabels.test(form.label))
+        .filter((form) => form.label && form.value)
         .slice(0, 8);
     }
 
     if (forms && typeof forms === "object") {
       return Object.entries(forms)
-        .map(([label, value]) => ({ label: cleanText(label), value: cleanText(value) }))
-        .filter((form) => form.label && form.value && usableFamilyLabels.test(form.label))
+        .map(([label, value]) => {
+          const cleanLabel = cleanText(label);
+          return {
+            label: normalizePartOfSpeech(cleanLabel) ||
+              (usableFamilyLabels.test(cleanLabel) ? cleanLabel : ""),
+            value: cleanText(value)
+          };
+        })
+        .filter((form) => form.label && form.value)
         .slice(0, 8);
     }
 
@@ -2889,7 +2966,7 @@ JSON 必须严格使用以下结构：
 
     const forms = item.forms.map((form) => `
       <div class="form-pair">
-        <span>${escapeHtml(form.label)}</span>
+        <span>${escapeHtml(normalizePartOfSpeech(form.label) || form.label)}</span>
         <span>${escapeHtml(form.value)}</span>
       </div>
     `).join("");
@@ -2906,7 +2983,7 @@ JSON 必须严格使用以下结构：
       <div class="word-context">
         <p class="detail-label">当前语境</p>
         <div class="context-sense">
-          ${contextSense?.pos ? `<span class="sense-pos">${escapeHtml(contextSense.pos)}</span>` : ""}
+          ${contextSense?.pos ? `<span class="sense-pos">${escapeHtml(normalizePartOfSpeech(contextSense.pos) || contextSense.pos)}</span>` : ""}
           <p class="context-meaning">${escapeHtml(item.meaning || contextSense?.zh || "")}</p>
         </div>
         ${contextExamples.length ? `
@@ -2923,7 +3000,7 @@ JSON 必须严格使用以下结构：
           ${otherSenses.map((sense) => `
             <li class="sense-item">
               <div class="sense-heading">
-                ${sense.pos ? `<span class="sense-pos">${escapeHtml(sense.pos)}</span>` : ""}
+                ${sense.pos ? `<span class="sense-pos">${escapeHtml(normalizePartOfSpeech(sense.pos) || sense.pos)}</span>` : ""}
                 <span class="sense-meaning">${escapeHtml(sense.zh)}</span>
               </div>
               ${sense.examples.length ? sense.examples.map((example) => renderLearningExample(example)).join("") : ""}
@@ -2935,7 +3012,12 @@ JSON 必须严格使用以下结构：
     const phraseExamples = item.type !== "word"
       ? itemExamples.map((example) => `<li>${renderLearningExample(example)}</li>`).join("")
       : "";
-    const memoryLabel = MEMORY_METHOD_LABELS[item.memoryMethod] || "记忆一下";
+    const memoryLabel = MEMORY_METHOD_LABELS[item.memoryMethod] || "记忆线索";
+    const showMemoryTrick = item.memoryTrick && !(
+      item.homophoneTrick &&
+      item.memoryMethod === "sound" &&
+      item.memoryTrick === item.homophoneTrick
+    );
     const formsLabel = item.type !== "word" ? "常见变形与搭配" : "词族变化";
 
     return `
@@ -2959,10 +3041,16 @@ JSON 必须严格使用以下结构：
         <h3 class="item-title">${escapeHtml(item.text)}</h3>
         ${phonetics ? `<div class="phonetics">${phonetics}</div>` : ""}
         ${contextHtml}
-        ${item.memoryTrick ? `
+        ${showMemoryTrick ? `
           <aside class="memory-trick">
             <p class="memory-trick-label"><span aria-hidden="true">✦</span> ${memoryLabel}</p>
             <p class="memory-trick-text">${escapeHtml(item.memoryTrick)}</p>
+          </aside>
+        ` : ""}
+        ${item.homophoneTrick ? `
+          <aside class="memory-trick homophone">
+            <p class="memory-trick-label"><span aria-hidden="true">♪</span> 谐音记</p>
+            <p class="memory-trick-text">${escapeHtml(item.homophoneTrick)}</p>
           </aside>
         ` : ""}
         ${forms ? `
@@ -3432,6 +3520,7 @@ JSON 必须严格使用以下结构：
           meaning: item.meaning,
           memoryMethod: item.memoryMethod,
           memoryTrick: item.memoryTrick,
+          homophoneTrick: item.type === "word" ? item.homophoneTrick : "",
           forms: normalizeForms(item.forms),
           examples: asArray(item.examples),
           senses: asArray(item.senses)
