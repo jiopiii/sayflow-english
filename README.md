@@ -77,6 +77,15 @@ http://localhost:8787
 
 Cloudflare Worker 托管网页与 `/api/sync`，D1 保存表达卡、活动记录和自定义词。普通 UI、同步代码和 D1 表结构都在 GitHub 仓库中。
 
+GitHub 自动部署已连接：
+
+- 仓库：`jiopiii/sayflow-english`
+- 生产分支：`main`
+- 构建命令：`npm run cloudflare:build`
+- 部署命令：`npx wrangler deploy`
+
+推送到 `main` 后会同时触发 GitHub Pages 和 Cloudflare Worker 更新。
+
 首次部署：
 
 ```bash
