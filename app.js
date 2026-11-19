@@ -23,8 +23,11 @@
     entries: "sayflow.entries.v1",
     activities: "sayflow.activities.v1",
     customLexicon: "sayflow.customLexicon.v1",
-    lookupCache: "sayflow.lookupCache.v1"
+    lookupCache: "sayflow.lookupCache.v1",
+    syncQueue: "sayflow.syncQueue.v1",
+    syncMeta: "sayflow.syncMeta.v1"
   };
+  const SYNC_COLLECTIONS = ["entries", "activities", "customLexicon"];
 
   const LEXICON_META = window.SAYFLOW_LEXICON_META || {};
   const BUILTIN_LEXICON = [
@@ -1066,6 +1069,12 @@ JSON 必须严格使用以下结构：
     testVoiceButton: document.querySelector("#testVoiceButton"),
     refreshVoicesButton: document.querySelector("#refreshVoicesButton"),
     packInfo: document.querySelector("#packInfo"),
+    syncStatus: document.querySelector("#syncStatus"),
+    syncNowButton: document.querySelector("#syncNowButton"),
+    exportAllButton: document.querySelector("#exportAllButton"),
+    importBackupButton: document.querySelector("#importBackupButton"),
+    importBackupInput: document.querySelector("#importBackupInput"),
+    libraryStorageStatus: document.querySelector("#libraryStorageStatus"),
     openLexiconButton: document.querySelector("#openLexiconButton"),
     closeLexiconButton: document.querySelector("#closeLexiconButton"),
     lexiconDrawer: document.querySelector("#lexiconDrawer"),
@@ -1096,6 +1105,15 @@ JSON 必须严格使用以下结构：
   let settings = loadJson(STORAGE_KEYS.settings, DEFAULT_SETTINGS);
   let entries = loadJson(STORAGE_KEYS.entries, []);
   let activities = loadJson(STORAGE_KEYS.activities, []);
+  let syncQueue = loadJson(STORAGE_KEYS.syncQueue, []);
+  let syncMeta = loadJson(STORAGE_KEYS.syncMeta, {
+    lastSyncedAt: "",
+    mode: "unknown"
+  });
+  let syncTimer = null;
+  let syncInFlight = false;
+  let syncInitialized = false;
+  let suppressSyncQueue = false;
   let activeTone = "natural";
   let activeScene = "hospitality";
   let activeTask = null;
@@ -1171,6 +1189,7 @@ JSON 必须严格使用以下结构：
     updateCharacterCount();
     renderLibrary();
     updateDashboard();
+    setupCloudSync();
 
     window.addEventListener("keydown", (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -1363,6 +1382,18 @@ JSON 必须严格使用以下结构：
     elements.refreshVoicesButton.addEventListener("click", () => {
       populateVoiceOptions();
       showToast("已重新检测系统语音");
+    });
+    elements.syncNowButton.addEventListener("click", () => {
+      syncNow({ manual: true });
+    });
+    elements.exportAllButton.addEventListener("click", exportAllData);
+    elements.importBackupButton.addEventListener("click", () => {
+      elements.importBackupInput.click();
+    });
+    elements.importBackupInput.addEventListener("change", async () => {
+      const file = elements.importBackupInput.files?.[0];
+      elements.importBackupInput.value = "";
+      if (file) await importBackupFile(file);
     });
 
     elements.settingsForm.addEventListener("submit", (event) => {
@@ -1778,7 +1809,7 @@ JSON 必须严格使用以下结构：
   }
 
   function persistCustomLexicon() {
-    localStorage.setItem(STORAGE_KEYS.customLexicon, JSON.stringify(customLexicon));
+    persistSyncCollection(STORAGE_KEYS.customLexicon, "customLexicon", customLexicon);
   }
 
   function populateCustomLexiconCategories() {
@@ -3497,7 +3528,381 @@ JSON 必须严格使用以下结构：
   }
 
   function persistEntries() {
-    localStorage.setItem(STORAGE_KEYS.entries, JSON.stringify(entries));
+    persistSyncCollection(STORAGE_KEYS.entries, "entries", entries);
+  }
+
+  function persistSyncCollection(storageKey, collection, records) {
+    const previous = asArray(loadJson(storageKey, []));
+    const previousById = new Map(previous.map((record) => [record.id, record]));
+    const currentIds = new Set(records.map((record) => record.id));
+    const now = new Date().toISOString();
+    const changes = [];
+
+    for (const record of records) {
+      if (!record?.id) continue;
+      const previousRecord = previousById.get(record.id);
+      const previousContent = previousRecord ? recordContentSignature(previousRecord) : "";
+      const currentContent = recordContentSignature(record);
+      let changed = !previousRecord || previousContent !== currentContent || !record.updatedAt;
+      if (!record.updatedAt) {
+        record.updatedAt = record.savedAt || record.completedAt || now;
+      } else if (changed && previousRecord?.updatedAt &&
+        record.updatedAt === previousRecord.updatedAt &&
+        previousContent !== currentContent) {
+        record.updatedAt = now;
+      }
+      if (changed) {
+        changes.push({
+          collection,
+          id: record.id,
+          updatedAt: record.updatedAt,
+          deleted: false
+        });
+      }
+    }
+
+    for (const previousRecord of previous) {
+      if (!previousRecord?.id || currentIds.has(previousRecord.id)) continue;
+      changes.push({
+        collection,
+        id: previousRecord.id,
+        updatedAt: now,
+        deleted: true
+      });
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(records));
+    if (!suppressSyncQueue) queueCloudChanges(changes);
+  }
+
+  function recordContentSignature(record) {
+    const { updatedAt, ...content } = record || {};
+    return JSON.stringify(content);
+  }
+
+  function setupCloudSync() {
+    syncQueue = asArray(syncQueue)
+      .filter((change) =>
+        change?.id &&
+        SYNC_COLLECTIONS.includes(change.collection) &&
+        /^\d{4}-\d{2}-\d{2}T/.test(String(change.updatedAt || ""))
+      )
+      .slice(-2000);
+    syncMeta = syncMeta && typeof syncMeta === "object" ? syncMeta : {
+      lastSyncedAt: "",
+      mode: "unknown"
+    };
+    persistSyncQueue();
+    syncInitialized = true;
+    updateSyncStatus();
+
+    if (window.location.protocol === "file:") {
+      syncMeta.mode = "local";
+      updateSyncStatus("本地文件模式，不连接云同步");
+      return;
+    }
+
+    window.addEventListener("online", () => scheduleCloudSync(300));
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") scheduleCloudSync(500);
+    });
+    window.setTimeout(() => syncNow(), 350);
+  }
+
+  function updateSyncStatus(message = "", state = "") {
+    if (!elements.syncStatus) return;
+    const pendingCount = syncQueue.length;
+    let text = message;
+    if (!text) {
+      if (syncInFlight) {
+        text = "正在同步…";
+      } else if (state === "error" || syncMeta.mode === "error") {
+        text = syncMeta.error || "同步失败，点击“立即同步”重试";
+      } else if (syncMeta.mode === "cloud") {
+        const time = syncMeta.lastSyncedAt
+          ? formatDate(syncMeta.lastSyncedAt)
+          : "";
+        text = pendingCount
+          ? `${pendingCount} 项等待同步`
+          : `已同步${time ? ` · ${time}` : ""}`;
+      } else if (state === "local" || syncMeta.mode === "local") {
+        text = "当前为本地版本，学习数据只保存在这台设备";
+      } else {
+        text = "正在检测同步服务…";
+      }
+    }
+    elements.syncStatus.textContent = text;
+    elements.syncStatus.dataset.state = state || syncMeta.mode || "unknown";
+    if (elements.syncNowButton) {
+      elements.syncNowButton.disabled = syncInFlight;
+      elements.syncNowButton.textContent = syncInFlight ? "同步中…" : "立即同步";
+    }
+    if (elements.libraryStorageStatus) {
+      const cloudReady = syncMeta.mode === "cloud";
+      elements.libraryStorageStatus.textContent = cloudReady
+        ? (pendingCount ? "已保存，等待云端同步" : "已同步到云端")
+        : "仅保存在当前浏览器";
+    }
+  }
+
+  function scheduleCloudSync(delay = 900) {
+    if (!syncInitialized || window.location.protocol === "file:") return;
+    window.clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(() => syncNow(), delay);
+  }
+
+  function queueCloudChanges(changes) {
+    if (!changes.length) return;
+    const queuedByKey = new Map(
+      syncQueue.map((change) => [
+        `${change.collection}:${change.id}`,
+        change
+      ])
+    );
+    for (const change of changes) {
+      if (!change?.id || !SYNC_COLLECTIONS.includes(change.collection)) continue;
+      const key = `${change.collection}:${change.id}`;
+      const existing = queuedByKey.get(key);
+      if (!existing || compareTimestamps(change.updatedAt, existing.updatedAt) >= 0) {
+        queuedByKey.set(key, {
+          collection: change.collection,
+          id: change.id,
+          updatedAt: change.updatedAt || new Date().toISOString(),
+          deleted: Boolean(change.deleted)
+        });
+      }
+    }
+    syncQueue = [...queuedByKey.values()].slice(-2000);
+    persistSyncQueue();
+    updateSyncStatus();
+    scheduleCloudSync();
+  }
+
+  function persistSyncQueue() {
+    localStorage.setItem(STORAGE_KEYS.syncQueue, JSON.stringify(syncQueue));
+  }
+
+  function persistSyncMeta() {
+    localStorage.setItem(STORAGE_KEYS.syncMeta, JSON.stringify(syncMeta));
+  }
+
+  function compareTimestamps(left, right) {
+    const leftValue = new Date(left || 0).getTime() || 0;
+    const rightValue = new Date(right || 0).getTime() || 0;
+    return leftValue - rightValue;
+  }
+
+  function getSyncCollection(collection) {
+    if (collection === "entries") return entries;
+    if (collection === "activities") return activities;
+    if (collection === "customLexicon") return customLexicon;
+    return [];
+  }
+
+  function setSyncCollection(collection, records) {
+    if (collection === "entries") entries = records;
+    if (collection === "activities") activities = records;
+    if (collection === "customLexicon") customLexicon = records;
+  }
+
+  function getSyncStorageKey(collection) {
+    return STORAGE_KEYS[collection];
+  }
+
+  function findSyncRecord(collection, id) {
+    return getSyncCollection(collection).find((record) => record.id === id) || null;
+  }
+
+  async function syncNow(options = {}) {
+    if (syncInFlight) return;
+    if (window.location.protocol === "file:") {
+      syncMeta.mode = "local";
+      updateSyncStatus("本地文件模式，不连接云同步");
+      return;
+    }
+
+    syncInFlight = true;
+    updateSyncStatus();
+    try {
+      await pushCloudQueue();
+      const snapshot = await fetchCloudSnapshot();
+      const localChanges = mergeCloudSnapshot(snapshot.records);
+      queueCloudChanges(localChanges);
+      await pushCloudQueue();
+      syncMeta = {
+        lastSyncedAt: new Date().toISOString(),
+        mode: "cloud",
+        error: ""
+      };
+      persistSyncMeta();
+      if (localChanges.length) refreshAfterCloudSync();
+      updateSyncStatus();
+      if (options.manual) showToast("云端同步完成");
+    } catch (error) {
+      const localOnly = error?.code === "SYNC_UNAVAILABLE";
+      syncMeta = {
+        ...syncMeta,
+        mode: localOnly ? "local" : "error",
+        error: error?.message || "同步失败"
+      };
+      persistSyncMeta();
+      updateSyncStatus("", localOnly ? "local" : "error");
+      if (options.manual) showToast(localOnly ? "当前页面没有云同步服务" : "同步失败，请稍后重试");
+    } finally {
+      syncInFlight = false;
+      updateSyncStatus();
+    }
+  }
+
+  async function fetchCloudSnapshot() {
+    const response = await fetch(`/api/sync?packId=${encodeURIComponent(PACK.id)}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    return readSyncResponse(response);
+  }
+
+  async function readSyncResponse(response) {
+    const contentType = response.headers.get("content-type") || "";
+    if (response.status === 404) {
+      const error = new Error("当前页面没有云同步服务");
+      error.code = "SYNC_UNAVAILABLE";
+      throw error;
+    }
+    if (!contentType.includes("application/json")) {
+      throw new Error(response.redirected || response.status === 401 || response.status === 403
+        ? "Cloudflare Access 登录已失效，请刷新页面重新登录"
+        : "同步服务返回了无法识别的响应");
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || `同步服务返回 ${response.status}`);
+    }
+    return payload;
+  }
+
+  async function pushCloudQueue() {
+    let rounds = 0;
+    while (syncQueue.length && rounds < 10) {
+      rounds += 1;
+      const batch = syncQueue.slice(0, 100);
+      const changes = batch.map((change) => {
+        const record = findSyncRecord(change.collection, change.id);
+        const deleted = change.deleted || !record;
+        return {
+          collection: change.collection,
+          id: change.id,
+          updatedAt: change.updatedAt,
+          deleted,
+          data: deleted ? null : record
+        };
+      });
+      const response = await fetch("/api/sync", {
+        method: "PUT",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({
+          packId: PACK.id,
+          schemaVersion: PACK.schemaVersion,
+          changes
+        })
+      });
+      await readSyncResponse(response);
+      const accepted = new Set(batch.map((change) =>
+        `${change.collection}:${change.id}:${change.updatedAt}`
+      ));
+      syncQueue = syncQueue.filter((change) =>
+        !accepted.has(`${change.collection}:${change.id}:${change.updatedAt}`)
+      );
+      persistSyncQueue();
+      updateSyncStatus();
+    }
+  }
+
+  function mergeCloudSnapshot(records) {
+    const serverRows = asArray(records);
+    const rowsByCollection = new Map(
+      SYNC_COLLECTIONS.map((collection) => [collection, new Map()])
+    );
+    for (const row of serverRows) {
+      if (!rowsByCollection.has(row.collection) || !row.id) continue;
+      rowsByCollection.get(row.collection).set(row.id, row);
+    }
+
+    const localChanges = [];
+    let changedAny = false;
+    for (const collection of SYNC_COLLECTIONS) {
+      const localRecords = asArray(getSyncCollection(collection));
+      const localById = new Map(localRecords.map((record) => [record.id, record]));
+      const serverById = rowsByCollection.get(collection);
+      const mergedById = new Map(localById);
+
+      for (const [id, row] of serverById) {
+        const localRecord = localById.get(id);
+        if (row.deleted) {
+          if (!localRecord || compareTimestamps(row.updatedAt, localRecord.updatedAt) >= 0) {
+            if (mergedById.delete(id)) changedAny = true;
+          } else {
+            localChanges.push({ collection, ...localRecord });
+          }
+          continue;
+        }
+        const serverRecord = row.data && typeof row.data === "object"
+          ? { ...row.data, id, packId: row.data.packId || PACK.id, updatedAt: row.updatedAt }
+          : null;
+        if (!serverRecord) continue;
+        if (!localRecord || compareTimestamps(row.updatedAt, localRecord.updatedAt) > 0) {
+          mergedById.set(id, serverRecord);
+          changedAny = true;
+        } else if (compareTimestamps(localRecord.updatedAt, row.updatedAt) > 0 ||
+          recordContentSignature(localRecord) !== recordContentSignature(serverRecord)) {
+          localChanges.push({ collection, ...localRecord });
+        }
+      }
+
+      for (const localRecord of localRecords) {
+        if (!serverById.has(localRecord.id)) {
+          localChanges.push({ collection, ...localRecord });
+        }
+      }
+
+      let mergedRecords = [...mergedById.values()].filter((record) => record?.id);
+      if (collection === "entries") {
+        mergedRecords = limitActivePackItems(mergedRecords, 100);
+      } else if (collection === "activities") {
+        mergedRecords = limitActivePackItems(mergedRecords, 300);
+      }
+      mergedRecords.sort((left, right) => {
+        const leftDate = left.updatedAt || left.savedAt || left.completedAt || "";
+        const rightDate = right.updatedAt || right.savedAt || right.completedAt || "";
+        return compareTimestamps(rightDate, leftDate);
+      });
+      setSyncCollection(collection, mergedRecords);
+      suppressSyncQueue = true;
+      localStorage.setItem(getSyncStorageKey(collection), JSON.stringify(mergedRecords));
+      suppressSyncQueue = false;
+    }
+
+    if (changedAny) refreshAfterCloudSync();
+    return localChanges.filter((record) => record?.id).map((record) => ({
+      collection: record.collection,
+      id: record.id,
+      updatedAt: record.updatedAt || record.savedAt || record.completedAt || new Date().toISOString(),
+      deleted: false
+    }));
+  }
+
+  function refreshAfterCloudSync() {
+    rebuildLexicon();
+    renderLibrary();
+    renderLexiconList();
+    updateDashboard();
   }
 
   function migrateStoredEntries() {
@@ -3661,14 +4066,87 @@ JSON 必须严格使用以下结构：
       showToast("表达库还是空的");
       return;
     }
-    const blob = new Blob([JSON.stringify(activeEntries, null, 2)], { type: "application/json" });
+    downloadJson(
+      `sayflow-library-${PACK.id}-${new Date().toISOString().slice(0, 10)}.json`,
+      activeEntries
+    );
+    showToast("表达库已导出");
+  }
+
+  function exportAllData() {
+    downloadJson(
+      `sayflow-backup-${PACK.id}-${new Date().toISOString().slice(0, 10)}.json`,
+      {
+        format: "sayflow-backup",
+        version: 1,
+        packId: PACK.id,
+        exportedAt: new Date().toISOString(),
+        data: {
+          entries: getActivePackEntries(),
+          activities: getActivePackActivities(),
+          customLexicon: customLexicon.filter((entry) =>
+            !entry.packId || entry.packId === PACK.id
+          )
+        }
+      }
+    );
+    showToast("完整学习数据已导出，不包含 API Key");
+  }
+
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `sayflow-library-${PACK.id}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
-    showToast("表达库已导出");
+  }
+
+  async function importBackupFile(file) {
+    try {
+      const payload = JSON.parse(await file.text());
+      const data = payload?.data || (Array.isArray(payload) ? { entries: payload } : payload);
+      const incomingCollections = {
+        entries: asArray(data?.entries),
+        activities: asArray(data?.activities),
+        customLexicon: asArray(data?.customLexicon || data?.customWords)
+      };
+      const counts = { entries: 0, activities: 0, customLexicon: 0 };
+
+      for (const collection of SYNC_COLLECTIONS) {
+        const current = asArray(getSyncCollection(collection));
+        const byId = new Map(current.map((record) => [record.id, record]));
+        const incoming = incomingCollections[collection];
+        for (const rawRecord of incoming) {
+          if (!rawRecord?.id) continue;
+          const record = {
+            ...rawRecord,
+            packId: rawRecord.packId || PACK.id,
+            updatedAt: rawRecord.updatedAt || rawRecord.savedAt ||
+              rawRecord.completedAt || new Date().toISOString()
+          };
+          const existing = byId.get(record.id);
+          if (!existing || compareTimestamps(record.updatedAt, existing.updatedAt) > 0) {
+            byId.set(record.id, record);
+            counts[collection] += 1;
+          }
+        }
+        let records = [...byId.values()];
+        if (collection === "entries") records = limitActivePackItems(records, 100);
+        if (collection === "activities") records = limitActivePackItems(records, 300);
+        setSyncCollection(collection, records);
+        persistSyncCollection(getSyncStorageKey(collection), collection, records);
+      }
+
+      refreshAfterCloudSync();
+      scheduleCloudSync(200);
+      const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      showToast(total ? `已导入 ${total} 条学习数据` : "备份中没有更新的数据");
+    } catch (error) {
+      console.error(error);
+      showToast("备份文件无法读取，请选择 SayFlow 导出的 JSON");
+    }
   }
 
   function setupSpeechRecognition() {
@@ -3956,7 +4434,7 @@ JSON 必须严格使用以下结构：
   }
 
   function persistActivities() {
-    localStorage.setItem(STORAGE_KEYS.activities, JSON.stringify(activities));
+    persistSyncCollection(STORAGE_KEYS.activities, "activities", activities);
   }
 
   function migrateLookupCache() {

@@ -1,0 +1,13 @@
+{
+  "name": "sayflow-english",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cloudflare:build": "node scripts/build-cloudflare.mjs",
+    "cloudflare:dev": "npm run cloudflare:build && wrangler dev",
+    "cloudflare:deploy": "npm run cloudflare:build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.165.0"
+  }
+}

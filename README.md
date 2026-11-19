@@ -10,11 +10,19 @@
 https://jiopiii.github.io/sayflow-english/
 ```
 
-手机可把该地址添加到主屏幕。页面通过 HTTPS 访问，支持浏览器语音识别；AI Key、自定义词、表达卡和复习记录仍保存在当前设备的浏览器中，不会自动同步。
+带跨设备同步的 Cloudflare 版本：
+
+```text
+https://sayflow-english.sayflow-english.workers.dev/
+```
+
+Cloudflare 版使用 Worker + D1，学习数据同步到云端；API Key 和语音设置仍只保存在各设备。首次进入需要输入个人访问密码，登录状态保留 30 天。
+
+手机可把该地址添加到主屏幕。GitHub Pages 版的表达卡、自定义词和复习记录只保存在当前设备；Cloudflare 版会同步这些学习数据，但 API Key、模型配置和语音设置仍留在各自设备。
 
 ## 当前版本
 
-- 单页网页，不需要服务器、数据库或账号。
+- GitHub Pages 版本为纯静态网页；Cloudflare 版本使用 Worker、D1 和单一访问密码。
 - 顶部提供快捷查词，支持按钮或 `Cmd/Ctrl + K` 打开；优先查询本地词库和自定义词，不调用 API。
 - 本地查不到时可手动触发 AI 查询，结果会缓存在当前浏览器；AI 查询才会使用已配置的接口。
 - 首页提供“咖啡厅 / 餐馆、农场 / 工厂、求职 / 工作、租房 / 生活、配送 / 跑腿、交通 / 租车、旅游 / 住宿、购物 / 办事、办公室工作、收银员、Sales / 店员、职场沟通”十二类任务，每行展示 3 个。
@@ -64,6 +72,35 @@ python3 -m http.server 8787
 ```text
 http://localhost:8787
 ```
+
+## Cloudflare 免费部署
+
+Cloudflare Worker 托管网页与 `/api/sync`，D1 保存表达卡、活动记录和自定义词。普通 UI、同步代码和 D1 表结构都在 GitHub 仓库中。
+
+首次部署：
+
+```bash
+cd "/Users/mjy/Documents/工作项目需要/AI搓原型/随说英语"
+npm install
+npx wrangler d1 migrations apply sayflow-sync --remote
+npm run cloudflare:deploy
+```
+
+Worker 需要两个加密变量：
+
+- `SAYFLOW_PASSWORD`：网站访问密码；
+- `SAYFLOW_SESSION_SECRET`：登录 Cookie 的签名密钥。
+
+更新变量：
+
+```bash
+npx wrangler secret put SAYFLOW_PASSWORD
+npx wrangler secret put SAYFLOW_SESSION_SECRET
+```
+
+同步范围只包括表达卡、活动记录和自定义词，不包含 API Base URL、API Key、模型名称、音色和语速。GitHub Pages 与 Workers 是两个不同站点，首次切换到 Cloudflare 时，应先在原站点设置中“导出完整数据”，再在新站点“导入备份”。
+
+该 Worker 采用自建密码会话，以避免 Cloudflare Access 免费层开通时要求绑定支付方式。页面和同步接口都需要先登录。
 
 ## 免费部署到手机
 
