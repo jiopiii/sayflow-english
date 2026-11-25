@@ -690,6 +690,43 @@ textarea:focus-visible {
   padding: 0 15px 11px;
 }
 
+.clear-input-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #6b7268;
+  background: rgba(15, 23, 18, 0.06);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.clear-input-button:hover {
+  background: rgba(15, 23, 18, 0.12);
+  color: #2c332c;
+}
+
+.clear-input-button:active {
+  transform: scale(0.92);
+}
+
+.clear-input-button:focus-visible {
+  outline: 2px solid rgba(49, 84, 62, 0.55);
+  outline-offset: 2px;
+}
+
+.clear-input-button svg {
+  width: 14px;
+  height: 14px;
+}
+
 .mic-button {
   display: inline-flex;
   align-items: center;

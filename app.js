@@ -1028,6 +1028,7 @@ JSON 必须严格使用以下结构：
     composerTitle: document.querySelector("#composerTitle"),
     clearTaskButton: document.querySelector("#clearTaskButton"),
     sourceInput: document.querySelector("#sourceInput"),
+    clearInputButton: document.querySelector("#clearInputButton"),
     promptRefreshButton: document.querySelector("#promptRefreshButton"),
     charCount: document.querySelector("#charCount"),
     micButton: document.querySelector("#micButton"),
@@ -1330,6 +1331,9 @@ JSON 必须严格使用以下结构：
 
   function bindComposer() {
     elements.sourceInput.addEventListener("input", updateCharacterCount);
+    if (elements.clearInputButton) {
+      elements.clearInputButton.addEventListener("click", clearSourceInput);
+    }
     elements.promptRefreshButton.addEventListener("click", refreshPrompt);
     elements.clearTaskButton.addEventListener("click", () => {
       clearActiveTask();
@@ -2248,7 +2252,18 @@ JSON 必须严格使用以下结构：
 
 
   function updateCharacterCount() {
-    elements.charCount.textContent = `${elements.sourceInput.value.length} / 1000`;
+    const length = elements.sourceInput.value.length;
+    elements.charCount.textContent = `${length} / 1000`;
+    if (elements.clearInputButton) {
+      elements.clearInputButton.classList.toggle("hidden", length === 0);
+    }
+  }
+
+  function clearSourceInput() {
+    if (!elements.sourceInput.value) return;
+    elements.sourceInput.value = "";
+    updateCharacterCount();
+    elements.sourceInput.focus();
   }
 
   function refreshPrompt() {

@@ -63,7 +63,7 @@ Cloudflare 版使用 Worker + D1，学习数据同步到云端；API Key 和语�
 直接双击 `index.html` 可以先看页面和示例。语音识别在不同浏览器中可能要求 HTTPS 或 localhost，因此更推荐启动本地静态服务器：
 
 ```bash
-cd "/Users/mjy/Documents/工作项目需要/AI搓原型/随说英语"
+cd "/Users/mjy/Documents/工作项目需要/AI搓原型/个人需求/随说英语"
 python3 -m http.server 8787
 ```
 
@@ -89,7 +89,7 @@ GitHub 自动部署已连接：
 首次部署：
 
 ```bash
-cd "/Users/mjy/Documents/工作项目需要/AI搓原型/随说英语"
+cd "/Users/mjy/Documents/工作项目需要/AI搓原型/个人需求/随说英语"
 npm install
 npx wrangler d1 migrations apply sayflow-sync --remote
 npm run cloudflare:deploy
@@ -127,7 +127,7 @@ npx wrangler secret put SAYFLOW_SESSION_SECRET
 在 Cloudflare Pages 控制台创建项目并上传当前文件夹，或者使用：
 
 ```bash
-npx wrangler pages deploy "/Users/mjy/Documents/工作项目需要/AI搓原型/随说英语"
+npx wrangler pages deploy "/Users/mjy/Documents/工作项目需要/AI搓原型/个人需求/随说英语"
 ```
 
 ### GitHub Pages
