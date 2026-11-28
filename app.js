@@ -791,13 +791,7 @@
 2. 在不改变人物、时间、数量、事实、态度和专有名词的前提下，重组成自然、口语化、容易朗读的英语；
 3. 优先使用常见词、短句和自然搭配，不要为了显得高级而使用生僻词、复杂从句或书面化表达；
 4. 给出 3 个可复用语块，类型覆盖整句表达、动词搭配、礼貌请求、确认信息、澄清或救场表达；
-5. 再给 4-6 个值得单独学习的重点单词（优先级最高）+ 最多 2 个重点词组；
-**全部词条必须严格从你给出的 natural_versions 译文中选取**——不允许列举个译文中未出现的词，也不允许把"这个话题常见的相关词"当重点词推荐；
-挑选标准（按此优先级，宁多勿漏）：
-  a) 承载核心信息的名词、动词、形容词（即使看似基础也必须列出，如 stain、carpet、finalised）；
-  b) 澳洲生活/工作场景高频词（bond、deduction、condition report 等）当且仅当它出现在译文中时才列；
-  c) 用户表达中"想用但可能没想到"的升级词，**前提是该升级词本身出现在你给出的 natural_versions 里**；
-语块中出现过的单词不必省略——单词学习需要单独给全部义项、变形和记忆法。
+5. 再给最多 3 个值得单独学习的单词或词组，不要和语块重复；
 6. 最后给 1-2 个口语重说任务。
 
 必须遵守：
@@ -810,9 +804,8 @@
 - word_family 和 phrase_variations 只保留真实、可复用的关系，不列第三人称单数、过去式等屈折形式。
 - memory_trick 只写拆词、词根或语义联想；另写 homophone_trick（自然中文谐音→词义，如 happy→嗨皮，玩嗨了所以高兴；无自然关联则留空）。
 - 单词和义项词性只写 n./v./adj./adv. 等缩写，不写中文词性。
-- 重点单词先给出当前语境下的中文含义；义项只列 2 个：**当前语境义项**（in_context: true）+ 该词**最常被用到的另一个义项**（如该词本来就只有一个常用义项则只列 1 个）。不要穷举全部义项，不要生僻/古旧/不匹配的词性，不为了凑数量编造。
+- 重点单词先给出当前语境下的中文含义，再列出该词在当代常见英语中的全部常用义项；合并近义释义，排除生僻、古旧和与该词不匹配的义项，不为了凑数量编造。
 - 每个义项必须标明词性和中文释义，并各给 1 个能体现该义项的英文例句和中文翻译。当前语境对应的义项必须标记 in_context: true，且只能标记一个。
-- **重点单词完整性自检（缺一不可，即使词看似简单）**：ipa_us/ipa_uk、meaning、senses（含所有常用义项、各自例句）、word_family（真实变形）、homophone_trick（自然中文谐音，如 stain→死盯，死盯着那块污渍看；无自然关联才可留空）、memory_trick（拆词/词根/联想）。常见词的同名词族变形尤其不要省略（如 carpet n. → v. 铺地毯）。
 - 重点词组仍只需给出当前语境含义和 1 个例句。
 - 不输出 Markdown，不输出解释文字，只输出一个合法 JSON 对象。
 
@@ -881,25 +874,11 @@ JSON 必须严格使用以下结构：
 `.trim();
 
   const TASK_GENERATOR_PROMPT = `
-你是澳洲 WHV 英语口语教练，擅长把日常场景加上"突发变量"变成真实可练的任务。
-
-用户当期场景由 user 消息提供（场景名 + 可用范围）。
-
-请生成 3 个**难度递进**的真实任务，每个任务必须**各随机携带一个不同的"突发变量"**（从下面 12 个里选，3 个任务互相不重复）：
-快节奏 / 第一次处理 / 没被听懂 / 临时变化 / 电话沟通 / 确认细节 / 嘈杂环境 / 时间紧迫 / 对方不满 / 涉及规则 / 同事接手 / 临近下班
-
-3 个任务**分别训练**以下三种技能，各一个：
-1. 开口开启句 — 用户主动开启对话，把需求/情况说清楚
-2. 应对追问 — 对方会接着追问，用户要能接住下一轮
-3. 异议或确认 — 涉及价格 / 时间 / 规则 / 职责的细化、异议、确认
-
-要求：
-- 任务要是那种"真的会发生在打工度假的人身上"的具体场景：带人物身份、地点、要办的事、潜在麻烦；不要教科书套路，不要考试题，不要给答案。
-- followUp 是对方真实的英文追问，带情绪（忙、不耐烦、怀疑、关心、推托等），不要中性客套。
-- repair 是一句当用户没听懂 / 对方说太快 / 词穷时真能立刻用上的英语救场句，简短自然可朗读。
-- title 中文 ≤ 15 字，一眼看出画面；prompt 中文 ≤ 60 字，把情境、你要做的事、突发变量讲清楚。
-- followUpZh 帮用户预判对方在问什么，不必逐字翻译 followUp。
-- 只输出 JSON：{"tasks":[{"title":"中文标题","prompt":"中文场景与目标","followUp":"英语追问","followUpZh":"中文解释","repair":"英语救场句"}]}
+你是澳洲 WHV 英语任务生成器。根据场景生成 3 个不同、具体、可直接练习的真实任务。
+任务必须是**打工度假者真的会立刻遇到**的画面：今天点单就卡壳 / 房东发信息说事 / 工头现场派活 / 药剂师问你症状 / ATO 来信要求补料 / 客人投诉你做的咖啡——**就是这种**。
+覆盖不同人物、地点、问题和突发情况；不要考试题，不要给答案。
+title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方是谁、你要办什么事。followUp 英文带真实语气（忙、不耐烦、关心、怀疑等）。repair 是没听懂/词穷时立刻能用的英语救场句。
+只输出 JSON：{"tasks":[{"title":"中文标题","prompt":"中文场景与目标","followUp":"英语追问","followUpZh":"中文解释","repair":"英语救场句"}]}
 `.trim();
 
   const LOOKUP_SYSTEM_PROMPT = `
@@ -2518,7 +2497,7 @@ JSON 必须严格使用以下结构：
         return true;
       })
       .sort((left, right) => (left.type === right.type ? 0 : left.type === "word" ? -1 : 1));
-    const practicalItems = items.slice(0, 6);
+    const practicalItems = items.slice(0, 3);
     let expressionChunks = normalizeExpressionChunks(
       data.useful_chunks || data.expression_chunks || data.chunks
     );
@@ -2738,10 +2717,9 @@ JSON 必须严格使用以下结构：
         .trim();
       if (!text || /\s/.test(text)) return false;
       if (!level) return COMMON_HIGH_VALUE_WORDS.has(text);
-      if (/(a1|cet[-\s]?3|basic|初学|基础)/i.test(level)) return false;
-      // A2 在此场景下保留：bond/stain/carpet 等 WHV 高频生活词多属 A2，不应被过滤。
+      if (/(a1|a2|cet[-\s]?3|basic|初学|基础)/i.test(level)) return false;
       // CET-4/6 remain compatible with cards saved before the CEFR rule changed.
-      return /(a2|b1|b2|c1|c2|常用|cet[-\s]?4|cet[-\s]?6|four|six|四级|六级)/i.test(level);
+      return /(b1|b2|c1|c2|cet[-\s]?4|cet[-\s]?6|four|six|四级|六级)/i.test(level);
     }
 
     if (item.type === "phrase") {
