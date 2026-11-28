@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.5.1",
+    contentVersion: "1.5.2",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -2140,9 +2140,16 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
       };
     }))
       .filter((task) => !excludedIds.includes(task.id));
-    const baseFresh = combinations.filter((task) => !avoidedBaseIds.includes(task.baseTaskId));
-    const candidates = baseFresh.length >= 3 ? baseFresh : combinations;
-    return candidates
+    const groups = new Map();
+    combinations.forEach((task) => {
+      if (!groups.has(task.baseTaskId)) groups.set(task.baseTaskId, []);
+      groups.get(task.baseTaskId).push(task);
+    });
+    const freshGroups = [...groups.entries()]
+      .filter(([baseTaskId]) => !avoidedBaseIds.includes(baseTaskId));
+    const selectedGroups = freshGroups.length >= 3 ? freshGroups : [...groups.entries()];
+    return selectedGroups
+      .map(([, tasks]) => tasks[Math.floor(Math.random() * tasks.length)])
       .map((task) => ({ task, order: Math.random() }))
       .sort((left, right) => left.order - right.order)
       .slice(0, 3)
