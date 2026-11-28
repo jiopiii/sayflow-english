@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.5.3",
+    contentVersion: "1.5.4",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -949,6 +949,18 @@ JSON 必须严格使用以下结构：
     "让用户马上重说一遍的具体中文任务"
   ]
 }
+`.trim();
+
+  const FREE_INPUT_PROMPT = `
+你是澳洲 WHV 英语口语教练。把用户输入改写成自然、好朗读、适合澳洲日常和工作场景的英语，不扩写事实。只输出一个合法 JSON 对象，不要 Markdown。
+严格输出：
+1. natural_versions：只有 1 个最自然版本，1-2 句。
+2. useful_chunks：正好 3 个，类型不同，每个含句型和一句短例句。
+3. key_words：4-6 个高质量词，必须出现在英文表达中；过滤 order/customer/product/item/job/manager/staff/received/left/leave/ready 等基础词。每个词只给当前语境义 1 个义项及 1 句短例句，并必须给 homophone_trick 中文谐音“邪修”记忆、memory_trick、真实 word_family。
+4. key_phrases：0-2 个，优先 sort out/take over/hold on/get back to/figure out/be deep in 等口语动词短语。
+不输出 practice_prompts。
+JSON 结构：
+{"original":"用户原句","intent":"意图","natural_versions":[{"style":"natural","text":"英文"}],"useful_chunks":[{"type":"类型","chunk":"可复用句型","meaning":"用途","example":"短例句"}],"key_words":[{"word":"单词","level":"B1|B2|C1|C2","ipa_us":"音标或暂无","ipa_uk":"音标或暂无","meaning":"当前语境义","senses":[{"pos":"n.|v.|adj.|adv.","zh":"释义","example":{"en":"短例句","zh":"翻译"},"in_context":true}],"homophone_trick":"中文谐音→词义","memory_trick":"拆词或联想","word_family":[{"label":"n.|v.|adj.|adv.","value":"派生词"}]}],"key_phrases":[{"phrase":"动词短语","level":"B1|B2|C1|C2","ipa":"暂无","meaning":"当前含义","memory_method":"split|sound|pun|association","memory_trick":"简短记忆","phrase_variations":[{"label":"相关表达","value":"表达"}],"examples":[{"en":"短例句","zh":"翻译"}]}]}
 `.trim();
 
   const TASK_GENERATOR_PROMPT = `
@@ -2518,9 +2530,13 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
     try {
       const requestStartedAt = performance.now();
       const content = await requestChatCompletion([
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: activeTask ? SYSTEM_PROMPT : FREE_INPUT_PROMPT },
         { role: "user", content: buildUserPrompt(input, activeTone) }
-      ], { temperature: 0.3, maxTokens: 2800, timeoutMs: 60000 });
+      ], {
+        temperature: activeTask ? 0.3 : 0.2,
+        maxTokens: activeTask ? 2800 : 2200,
+        timeoutMs: 60000
+      });
       const requestMs = Math.round(performance.now() - requestStartedAt);
       const renderStartedAt = performance.now();
       const parsed = parseModelJson(content);
@@ -2637,7 +2653,7 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
 
   function buildManualPrompt(input, tone) {
     return [
-      SYSTEM_PROMPT,
+      activeTask ? SYSTEM_PROMPT : FREE_INPUT_PROMPT,
       "",
       "---",
       buildUserPrompt(input, tone)
@@ -3180,6 +3196,7 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
         <div class="chunk-grid">${chunksHtml}</div>
       ` : ""}
 
+      ${activeTask ? `
       <p class="section-label">对话演练</p>
       <div class="coach-panel">
         <article class="coach-card counterpart">
@@ -3243,7 +3260,9 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
           </div>
         </article>
       </div>
+      ` : ""}
 
+      ${activeTask ? `
       <section class="practice-studio" id="practiceStudio">
         <div class="practice-heading">
           <div>
@@ -3277,6 +3296,7 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
         </div>
         <p class="practice-note">完成记录只保存在当前浏览器。复习会从明天开始，按 1、3、7、14、30 天逐步间隔。</p>
       </section>
+      ` : ""}
 
       ${wordsHtml ? `
         <p class="section-label">重点单词</p>
@@ -3288,7 +3308,7 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
         ${phrasesHtml}
       ` : ""}
 
-      ${practiceHtml ? `
+      ${activeTask && practiceHtml ? `
         <p class="section-label">练习</p>
         <ul class="practice-list">${practiceHtml}</ul>
       ` : ""}
