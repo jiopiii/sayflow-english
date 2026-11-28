@@ -142,6 +142,8 @@ window.SAYFLOW_LEXICON = [
   { term: "action item", category: "office", kind: "phrase", zh: "待办事项", example: "I'll add that as an action item." },
   { term: "follow up", category: "office", kind: "phrase", zh: "跟进", example: "I'll follow up after lunch.", aliases: ["follow-up", "following up"] },
   { term: "loop in", category: "office", kind: "phrase", zh: "把某人加入沟通", example: "Can you loop me in on the email?" },
+  { term: "take over", category: "office", kind: "phrase", zh: "接手；接管", example: "Can you take over the till for ten minutes?" },
+  { term: "be deep in", category: "office", kind: "phrase", zh: "正忙于；专注于", example: "Sorry, I was deep in a call.", aliases: ["deep in"] },
   { term: "stakeholder", category: "office", kind: "word", zh: "利益相关方", example: "We need stakeholder approval." },
   { term: "deadline", category: "office", kind: "word", zh: "截止时间", example: "Can we confirm the deadline?" },
   { term: "bandwidth", category: "office", kind: "word", zh: "可投入的工作精力/时间", example: "I don't have the bandwidth this week." },

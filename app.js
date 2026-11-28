@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.5.2",
+    contentVersion: "1.5.3",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -801,13 +801,19 @@
   ]);
 
   const BASIC_LEARNING_WORDS = new Set([
-    "ask", "buy", "call", "car", "check", "city", "coffee", "customer",
-    "day", "drink", "find", "food", "get", "give", "go", "good", "have",
-    "help", "home", "house", "item", "job", "know", "make", "manager",
-    "money", "need", "office", "order", "pay", "people", "person", "phone",
-    "place", "price", "problem", "product", "room", "say", "service", "shop",
-    "speak", "staff", "store", "take", "talk", "thing", "think", "time",
-    "train", "want", "week", "work"
+    "arrive", "ask", "begin", "book", "bring", "buy", "call", "car",
+    "carry", "change", "check", "choose", "city", "clean", "close", "coffee",
+    "come", "continue", "customer", "day", "decide", "deep", "drink",
+    "feel", "find", "finish", "follow", "food", "get", "give", "go",
+    "good", "happen", "have", "help", "hold", "home", "house", "item",
+    "job", "keep", "know", "leave", "left", "look", "make", "manager",
+    "meet", "money", "move", "need", "office", "open", "order", "pay",
+    "people", "person", "phone", "pick", "place", "price", "problem",
+    "product", "provide", "ready", "receive", "right", "room", "run",
+    "say", "see", "send", "service", "shop", "show", "sit", "speak",
+    "staff", "start", "stop", "store", "take", "talk", "tell", "thing",
+    "think", "time", "train", "try", "turn", "use", "wait", "want",
+    "watch", "week", "work", "write", "wrong"
   ]);
 
   const HIGH_VALUE_WHV_TERMS = new Set([
@@ -824,6 +830,14 @@
     "go out", "have a look", "hold on", "let me know", "make sense",
     "no idea", "no worries", "not a problem", "on the way", "pop in",
     "sounds good", "stay in", "that works"
+  ]);
+
+  const ESSENTIAL_PHRASAL_VERBS = new Set([
+    "be deep in", "cash out", "check in", "check out", "dine in", "drop off",
+    "figure out", "follow up", "get back to", "get off", "get on", "hold on",
+    "keep an eye on", "look after", "pick up", "pop in", "put up with",
+    "run out of", "sort out", "split the bill", "take away", "take care of",
+    "take over", "tap off", "tap on", "turn up"
   ]);
 
   const TASK_SKILLS = ["open", "follow_up", "clarify"];
@@ -860,8 +874,8 @@
 - natural_versions 只给 1 个最自然的版本，用 1-2 个短句把核心意思和下一步说清，不能为了凑句数添加事实。
 - useful_chunks 正好给 3 个，类型要区分，不要重复整句；每个只配一句短例句。
 - key_words 给 4-6 个高质量词；必须真实出现在 natural_versions 中。如果整句确实没有足够高价值词，可以少于 4 个，但不能硬凑。
-- 不要拿 order、customer、product、item、job、manager、staff、coffee 等基础词凑数。优先 B2/C1、熟词僻义、澳洲 WHV 专用词或容易记混的搭配。
-- key_phrases 给 0-2 个；不能把整句当词组，也不能与重点单词重复。
+- 不要拿 order、customer、product、item、job、manager、staff、coffee、received、left、leave、ready 等基础词或其变形凑数。优先 B2/C1、熟词僻义、澳洲 WHV 专用词或容易记混的搭配。
+- key_phrases 在 natural_versions 中确有合适表达时给 1-2 个，优先高频口语动词短语（如 sort out、take over、hold on、get back to、figure out、be deep in），说明当前含义并配一个短例句；不能把整句当词组，也不能与重点单词重复。
 - practice_prompts 只给 1 条，必须是能让用户马上重说一遍的中文任务。
 - 语块要能在其他场景重复使用；词组不要把整句当词组，也不要重复语块。
 - 音标不确定时写“暂无”；按用户偏好给 US 或 UK 音标。
@@ -2799,9 +2813,21 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
       });
     }
 
+    const combined = [...(result.learningItems || [])];
+    let wordCount = combined.filter((item) => item.type === "word").length;
+    let phraseCount = combined.filter((item) => item.type !== "word").length;
+    for (const item of localItems) {
+      if (combined.length >= 8) break;
+      if (item.type === "word" && wordCount >= 6) continue;
+      if (item.type !== "word" && phraseCount >= 2) continue;
+      combined.push(item);
+      if (item.type === "word") wordCount += 1;
+      else phraseCount += 1;
+    }
+
     return {
       ...result,
-      learningItems: [...(result.learningItems || []), ...localItems].slice(0, 8)
+      learningItems: combined
     };
   }
 
@@ -2809,6 +2835,7 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
     const kind = cleanText(entry?.kind).toLowerCase();
     const term = normalizeMatchText(entry?.term);
     if (!term || kind === "place" || kind === "menu") return false;
+    if (ESSENTIAL_PHRASAL_VERBS.has(term)) return true;
     if (kind === "idiom" || kind === "collocation") {
       return !BASIC_LEARNING_PHRASES.has(term);
     }
@@ -2857,7 +2884,11 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
         return keys.some((key) => haystack.includes(` ${key} `)) ||
           (entry.zhTriggers || []).some((trigger) => rawText.includes(trigger.toLowerCase()));
       })
-      .sort((left, right) => right.term.length - left.term.length);
+      .sort((left, right) => {
+        const leftPriority = ESSENTIAL_PHRASAL_VERBS.has(normalizeMatchText(left.term)) ? 1 : 0;
+        const rightPriority = ESSENTIAL_PHRASAL_VERBS.has(normalizeMatchText(right.term)) ? 1 : 0;
+        return rightPriority - leftPriority || right.term.length - left.term.length;
+      });
   }
 
   function normalizeMatchText(text) {
@@ -2964,6 +2995,9 @@ counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合
     }
 
     if (item.type === "phrase") {
+      const normalizedText = normalizeMatchText(item.text);
+      if (ESSENTIAL_PHRASAL_VERBS.has(normalizedText)) return true;
+      if (BASIC_LEARNING_PHRASES.has(normalizedText)) return false;
       const parts = item.text.trim().split(/\s+/);
       if (parts.length < 2 || item.text.length > 80) return false;
       if (/(a1|cet[-\s]?3|basic|初学|基础)/i.test(level)) return false;

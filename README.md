@@ -22,7 +22,7 @@ Cloudflare 版使用 Worker + D1，学习数据同步到云端；API Key 和语�
 
 ## 当前版本
 
-- 内容版本 `1.5.2`：AI 换任务使用 12 类子情景池提高场景差异；同一组默认任务必须来自不同基础情景；任务描述和回答保持 1-2 句。
+- 内容版本 `1.5.3`：过滤 `received / left / leave / ready` 等基础词和变形，并优先保留 `sort out / take over / hold on / get back to` 等口语动词短语。
 - GitHub Pages 版本为纯静态网页；Cloudflare 版本使用 Worker、D1 和单一访问密码。
 - 顶部提供快捷查词，支持按钮或 `Cmd/Ctrl + K` 打开；优先查询本地词库和自定义词，不调用 API。
 - 本地查不到时可手动触发 AI 查询，结果会缓存在当前浏览器；AI 查询才会使用已配置的接口。
@@ -51,7 +51,7 @@ Cloudflare 版使用 Worker + D1，学习数据同步到云端；API Key 和语�
 - 使用 DeepSeek 接口时，请求会显式关闭 thinking 模式并使用 JSON Output，避免等待推理过程和正文为空；其他 OpenAI 兼容接口保持标准请求格式。
 - AI 提示词优先使用澳洲职场常见说法，如 takeaway、roster、smoko、TFN、super、bond、payslip、timesheet、PPE 和 induction。
 - 涉及签证工时、税务或劳动法时，页面只练语言表达；具体规则应以澳洲内政部和 Fair Work 官方信息为准。
-- 重点词采用质量优先：先过滤 `order / customer / product / item / job / manager` 等基础词，再保留 4-6 个高价值单词；模型结果优先，本地词库只在空位中补充，单次最多展示 8 个学习点。
+- 重点词采用质量优先：先过滤 `order / customer / product / item / job / manager / received / left / leave / ready` 等基础词及常见词形变化，再保留 4-6 个高价值单词；`sort out / take over / hold on / get back to / figure out / be deep in` 等口语动词短语可进入重点词组，最多 2 个。模型结果优先，本地词库只在空位中补充。
 - 结果区将“重点单词”和“重点词组”分开，词组会列出常见变形、常见搭配、相关表达、反义表达或适用句型。
 - 单词卡先展示音标和当前语境含义，再列出当代常见英语中的其他常用义项；每个义项标出词性、中文释义及对应例句。生僻、古旧和不匹配的释义不强行补充。
 - 重点单词词性使用 `n. / v. / adj. / adv.` 等缩写；除拆词、词根和语义联想外，再提供一条简短的中文谐音联想，没有自然关联时不硬凑。
