@@ -897,7 +897,7 @@ JSON 必须严格使用以下结构：
           "in_context": true
         }
       ],
-      "homophone_trick": "中文谐音→词义；无则空",
+      "homophone_trick": "必须填写：中文谐音→词义的一句邪修记忆",
       "memory_trick": "拆词、词根或语义联想",
       "word_family": [
         { "label": "v.", "value": "implement" },
