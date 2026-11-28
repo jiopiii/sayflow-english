@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.5.0",
+    contentVersion: "1.5.1",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -184,6 +184,20 @@
     cashier: "收银员：现金刷卡、EFTPOS、找零、小票、分单、价格核验和退款审批",
     retail: "Sales 店员：接待、推荐、尺码库存、试衣间、换货、收据和追加销售",
     social: "职场沟通：small talk、没听清、请假、换班、分歧、澄清"
+  };
+  const SCENE_SCENARIO_POOLS = {
+    hospitality: ["堂食点单", "外卖漏放餐品", "电话订位", "过敏原确认", "上错菜处理", "高峰期买单"],
+    farm: ["采摘标准", "包装质检", "雨天停工", "设备卡料", "工时核对", "新员工安全培训"],
+    job: ["电话投递跟进", "试工自我介绍", "时薪和 loading", "临时改班", "入职材料", "面试后 follow-up"],
+    life: ["预约看房", "退房清洁争议", "热水器维修", "异常电费", "银行账户", "GP 预约"],
+    delivery: ["餐厅取餐", "公寓门禁", "客户不接电话", "酒类查证件", "地址临时变更", "平台申诉"],
+    transport: ["公交换乘", "坐过站", "租车保险", "停车罚款", "轻微剐蹭", "还车油量"],
+    travel: ["提前入住", "青旅噪音", "一日游改期", "失物招领", "游客中心咨询", "行李寄存"],
+    shopping: ["超市找货", "退换尺码", "手机套餐", "药店咨询", "电器故障", "缺货调货"],
+    office: ["早会同步", "会议任务确认", "线上会议故障", "任务延期", "请假交接", "跨同事协作"],
+    cashier: ["现金刷卡", "支付失败", "分单结账", "核价", "最低消费", "酒类查 ID"],
+    retail: ["随便看看", "查库存", "试衣间", "退换政策", "线上下单取货", "缺货调货"],
+    social: ["smoko 闲聊", "没听清任务", "口音误解", "换班", "请假", "请求具体反馈"]
   };
 
   const GAP_LABELS = {
@@ -818,11 +832,6 @@
     follow_up: "应对追问",
     clarify: "异议 / 确认"
   };
-  const TASK_SKILL_HINTS = {
-    open: "请先用两三句话说清来意，再等对方回应。",
-    follow_up: "先听完对方的追问，再补充原因和下一步安排。",
-    clarify: "请确认关键细节，并明确下一步怎么处理。"
-  };
   const TASK_TWISTS = [
     "快节奏",
     "第一次处理",
@@ -848,7 +857,7 @@
 - 使用澳洲工作场景常见表达，如 takeaway、roster、smoko、TFN、super、bond、payslip、PPE。
 - 不编造签证、工时或劳动法规则；相关话题只练表达，并提醒以官方信息为准。
 - 不补写事实，不改变原意；优先短句、常用词和容易开口的说法。
-- natural_versions 只给 1 个最自然的版本。默认用 2-3 个短句，把核心意思、关键细节和下一步说完整；只有极其简单的单一请求可以用 1 句，不能为了凑句数添加事实。
+- natural_versions 只给 1 个最自然的版本，用 1-2 个短句把核心意思和下一步说清，不能为了凑句数添加事实。
 - useful_chunks 正好给 3 个，类型要区分，不要重复整句；每个只配一句短例句。
 - key_words 给 4-6 个高质量词；必须真实出现在 natural_versions 中。如果整句确实没有足够高价值词，可以少于 4 个，但不能硬凑。
 - 不要拿 order、customer、product、item、job、manager、staff、coffee 等基础词凑数。优先 B2/C1、熟词僻义、澳洲 WHV 专用词或容易记混的搭配。
@@ -937,8 +946,8 @@ JSON 必须严格使用以下结构：
 每个任务从以下变量选 1 个，3 个不能重复：快节奏、第一次处理、没被听懂、临时变化、电话沟通、确认细节、嘈杂环境、时间紧迫、对方不满、涉及规则、同事接手、临近下班。
 任务必须像 WHV 真实生活：点单卡壳、房东发消息、工头现场派活、药剂师问症状、客人投诉、同事交接。
 不要教科书题，不要在任务卡里直接给完整答案。
-title 中文 ≤15 字；prompt 用 2-3 句中文写清地点、人物、背景、这一轮要办什么，总长度约 70-130 字。
-counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合人物和情绪，不能只丢一句问题。followUp 是你说完后对方可能接着追问的 2-3 句英语，要带忙、不耐烦、关心、怀疑等真实语气，并给出继续回应的空间。repair 是没听懂时能说的 1-2 句短句。
+title 中文 ≤15 字；prompt 用 1-2 句中文写清地点、人物、背景和这一轮要办什么。
+counterpart 是对方开口或先回应你的 1-2 句自然英语，必须符合人物和情绪。followUp 是你说完后对方可能接着追问的 1-2 句英语，要带忙、不耐烦、关心、怀疑等真实语气。repair 是没听懂时能说的 1 句救场表达。
 只输出 JSON：
 {"tasks":[{"title":"中文标题","prompt":"中文场景与目标","skill":"open|follow_up|clarify","twist":"突发变量","counterpart":"English opening line","counterpartZh":"中文解释","followUp":"English follow-up","followUpZh":"中文解释","repair":"English repair"}]}
 `.trim();
@@ -2125,7 +2134,7 @@ counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合
         contextId: context.id,
         contextLabel: context.label,
         title: `${context.label} · ${task.title}`,
-        prompt: `${context.lead}${task.prompt}${TASK_SKILL_HINTS[skill]}`,
+        prompt: buildTaskPrompt(context.lead, task.prompt),
         twist: context.label,
         skill
       };
@@ -2138,6 +2147,18 @@ counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合
       .sort((left, right) => left.order - right.order)
       .slice(0, 3)
       .map(({ task }) => task);
+  }
+
+  function buildTaskPrompt(contextLead, taskPrompt) {
+    const combined = `${contextLead}${taskPrompt}`;
+    return countTaskSentences(combined) <= 2 ? combined : taskPrompt;
+  }
+
+  function countTaskSentences(text) {
+    return String(text || "")
+      .split(/[。！？!?]+/)
+      .filter((part) => part.trim())
+      .length;
   }
 
   function taskRotationEntry(task) {
@@ -2190,6 +2211,7 @@ counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合
 
     try {
       const currentTitles = (taskSets[scene] || []).map((task) => task.title);
+      const scenarioIdeas = pickScenarioIdeas(scene, 3);
       const content = await requestChatCompletion([
         { role: "system", content: TASK_GENERATOR_PROMPT },
         {
@@ -2197,12 +2219,13 @@ counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合
           content: [
             `场景：${SCENE_LABELS[scene]}`,
             `可用范围：${SCENE_GENERATION_BRIEF[scene]}`,
+            `本轮子情景：${scenarioIdeas.join("、")}。3 个任务各取一个，不能都围绕同一件事。`,
             focusTerms.length ? `尽量自然融入这些词：${focusTerms.join("、")}` : "",
             `不要重复：${currentTitles.join("；") || "无"}`,
             "生成 3 个难度递进的任务，三项技能和三个突发变量都不能重复。"
           ].filter(Boolean).join("\n")
         }
-      ], { temperature: 0.8, maxTokens: 1800, timeoutMs: 25000 });
+      ], { temperature: 0.8, maxTokens: 1400, timeoutMs: 20000 });
       const generated = normalizeGeneratedTasks(parseModelJson(content), scene);
       taskSets[scene] = fillTasks(generated, localFallback);
       rememberTaskSet(scene, taskSets[scene]);
@@ -2221,6 +2244,16 @@ counterpart 是对方开口或先回应你的 2-3 句自然英语，必须符合
       elements.shuffleTasksButton.disabled = false;
       elements.shuffleTasksButton.textContent = "换一组任务 →";
     }
+  }
+
+  function pickScenarioIdeas(scene, count) {
+    const pool = [...(SCENE_SCENARIO_POOLS[scene] || [])];
+    const picked = [];
+    while (pool.length && picked.length < count) {
+      const index = Math.floor(Math.random() * pool.length);
+      picked.push(pool.splice(index, 1)[0]);
+    }
+    return picked;
   }
 
   function normalizeGeneratedTasks(data, scene) {
