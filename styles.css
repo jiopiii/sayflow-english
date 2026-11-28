@@ -516,6 +516,14 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.task-card-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .task-number {
   color: var(--orange);
   font-family: var(--serif);
@@ -528,6 +536,15 @@ textarea:focus-visible {
   font-size: 9px;
   font-weight: 760;
   letter-spacing: 0.08em;
+}
+
+.task-twist {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #8d4a36;
+  background: rgba(255, 237, 226, 0.86);
+  font-size: 8px;
+  font-weight: 740;
 }
 
 .task-card-title {
@@ -1312,6 +1329,21 @@ textarea:focus-visible {
   background: rgba(255, 247, 239, 0.78);
 }
 
+.coach-card.reply-example {
+  border-color: rgba(49, 84, 62, 0.2);
+  background: rgba(232, 244, 236, 0.8);
+}
+
+.coach-card.confirm {
+  grid-column: 1 / -1;
+  border-color: rgba(178, 145, 76, 0.2);
+  background: rgba(255, 251, 238, 0.76);
+}
+
+.coach-card.counterpart {
+  background: rgba(247, 250, 247, 0.82);
+}
+
 .coach-label {
   margin: 0;
   color: var(--muted);
@@ -1326,6 +1358,12 @@ textarea:focus-visible {
   font-family: var(--serif);
   font-size: 15px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.coach-text.coach-cue {
+  color: var(--green);
+  font-style: italic;
 }
 
 .coach-translation {

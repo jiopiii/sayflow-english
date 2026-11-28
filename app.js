@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.3.0",
+    contentVersion: "1.4.0",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -764,6 +764,8 @@
     "allergy",
     "confirm",
     "layover",
+    "check in",
+    "check out",
     "check-in",
     "check-out",
     "checkin",
@@ -783,30 +785,77 @@
     "supervisor"
   ]);
 
+  const BASIC_LEARNING_WORDS = new Set([
+    "ask", "buy", "call", "car", "check", "city", "coffee", "customer",
+    "day", "drink", "find", "food", "get", "give", "go", "good", "have",
+    "help", "home", "house", "item", "job", "know", "make", "manager",
+    "money", "need", "office", "order", "pay", "people", "person", "phone",
+    "place", "price", "problem", "product", "room", "say", "service", "shop",
+    "speak", "staff", "store", "take", "talk", "thing", "think", "time",
+    "train", "want", "week", "work"
+  ]);
+
+  const HIGH_VALUE_WHV_TERMS = new Set([
+    "allergen", "bond", "carpet", "condition report", "deduction", "dispute",
+    "dietary requirement", "entry report", "exit report", "fair wear",
+    "fair wear and tear", "final inspection", "finalise", "induction",
+    "penalty rate", "payslip", "photo evidence", "professional clean",
+    "rent in advance", "short-staffed", "stain", "stocktake", "timesheet",
+    "tribunal", "wear and tear"
+  ]);
+
+  const BASIC_LEARNING_PHRASES = new Set([
+    "by the way", "catch you later", "get on", "get off", "give someone a hand",
+    "go out", "have a look", "hold on", "let me know", "make sense",
+    "no idea", "no worries", "not a problem", "on the way", "pop in",
+    "sounds good", "stay in", "that works"
+  ]);
+
+  const TASK_SKILLS = ["open", "follow_up", "clarify"];
+  const TASK_SKILL_LABELS = {
+    open: "开口开启",
+    follow_up: "应对追问",
+    clarify: "异议 / 确认"
+  };
+  const TASK_TWISTS = [
+    "快节奏",
+    "第一次处理",
+    "没被听懂",
+    "临时变化",
+    "电话沟通",
+    "确认细节",
+    "嘈杂环境",
+    "时间紧迫",
+    "对方不满",
+    "涉及规则",
+    "同事接手",
+    "临近下班"
+  ];
+  const DEFAULT_REPAIR = "Sorry, I didn't catch that. Could you say it again?";
+  const DEFAULT_CONFIRM = "Let me check on that and get back to you.";
+
   const SYSTEM_PROMPT = `
 你是一名克制、准确、懂中文母语者困难的澳洲 WHV 生活与工作英语教练。用户计划去澳洲打工度假，工作场景以咖啡厅、餐馆、农场和工厂为主，同时需要处理租房、银行、就医和同事沟通。目标不是参加雅思、托福等考试。
 
-用户会输入中文、英文或中英混合的一句话。你的任务不是逐字翻译，而是：
-1. 先准确理解用户真正想表达的意思；
-2. 在不改变人物、时间、数量、事实、态度和专有名词的前提下，重组成自然、口语化、容易朗读的英语；
-3. 优先使用常见词、短句和自然搭配，不要为了显得高级而使用生僻词、复杂从句或书面化表达；
-4. 给出 3 个可复用语块，类型覆盖整句表达、动词搭配、礼貌请求、确认信息、澄清或救场表达；
-5. 再给最多 3 个值得单独学习的单词或词组，不要和语块重复；
-6. 最后给 1-2 个口语重说任务。
+用户会输入中文、英文或中英混合的一句话。请先理解真实意图，再在不改人物、时间、数量、事实、态度和专有名词的前提下，写成自然、好开口、适合朗读的澳洲口语。
 
 必须遵守：
 - 使用澳洲工作场景常见表达，如 takeaway、roster、smoko、TFN、super、bond、payslip、PPE。
 - 不编造签证、工时或劳动法规则；相关话题只练表达，并提醒以官方信息为准。
 - 不补写事实，不改变原意；优先短句、常用词和容易开口的说法。
-- CEFR 只作难度标记；为完成任务所需的高频 A2 表达可以优先于生僻的 B2、C1 单词。不要逼问高阶词。
+- natural_versions 只给 1 个最自然的版本。
+- useful_chunks 正好给 3 个，类型要区分，不要重复整句；每个只配一句短例句。
+- key_words 给 0-2 个，宁缺毋滥；必须真实出现在 natural_versions 中，并且值得单独学。
+- 不要拿 order、customer、product、item、job、manager、staff、coffee 等基础词凑数。优先 B2/C1、熟词僻义、澳洲 WHV 专用词或容易记混的搭配。
+- key_phrases 给 0-1 个；不能把整句当词组，也不能与重点单词重复。
+- practice_prompts 只给 1 条，必须是能让用户马上重说一遍的中文任务。
 - 语块要能在其他场景重复使用；词组不要把整句当词组，也不要重复语块。
 - 音标不确定时写“暂无”；按用户偏好给 US 或 UK 音标。
-- word_family 和 phrase_variations 只保留真实、可复用的关系，不列第三人称单数、过去式等屈折形式。
-- memory_trick 只写拆词、词根或语义联想；另写 homophone_trick（自然中文谐音→词义，如 happy→嗨皮，玩嗨了所以高兴；无自然关联则留空）。
+- word_family 只保留真实、可复用的派生关系，不列第三人称单数、过去式、复数等屈折形式。
+- memory_trick 和 homophone_trick 只在确有帮助时写，不自然就留空。
 - 单词和义项词性只写 n./v./adj./adv. 等缩写，不写中文词性。
-- 重点单词先给出当前语境下的中文含义，再列出该词在当代常见英语中的全部常用义项；合并近义释义，排除生僻、古旧和与该词不匹配的义项，不为了凑数量编造。
-- 每个义项必须标明词性和中文释义，并各给 1 个能体现该义项的英文例句和中文翻译。当前语境对应的义项必须标记 in_context: true，且只能标记一个。
-- 重点词组仍只需给出当前语境含义和 1 个例句。
+- 每个重点单词只列 1-2 个义项：当前语境义项必列；最多再加 1 个真正常见且不同的义项。每项配一句短例句。
+- 当前语境义项必须标记 in_context: true，且只能标记一个。
 - 不输出 Markdown，不输出解释文字，只输出一个合法 JSON 对象。
 
 JSON 必须严格使用以下结构：
@@ -868,17 +917,24 @@ JSON 必须严格使用以下结构：
     }
   ],
   "practice_prompts": [
-    "让用户主动开口的具体任务"
+    "让用户马上重说一遍的具体中文任务"
   ]
 }
 `.trim();
 
   const TASK_GENERATOR_PROMPT = `
-你是澳洲 WHV 英语任务生成器。根据场景生成 3 个不同、具体、可直接练习的真实任务。
-任务必须是**打工度假者真的会立刻遇到**的画面：今天点单就卡壳 / 房东发信息说事 / 工头现场派活 / 药剂师问你症状 / ATO 来信要求补料 / 客人投诉你做的咖啡——**就是这种**。
-覆盖不同人物、地点、问题和突发情况；不要考试题，不要给答案。
-title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方是谁、你要办什么事。followUp 英文带真实语气（忙、不耐烦、关心、怀疑等）。repair 是没听懂/词穷时立刻能用的英语救场句。
-只输出 JSON：{"tasks":[{"title":"中文标题","prompt":"中文场景与目标","followUp":"英语追问","followUpZh":"中文解释","repair":"英语救场句"}]}
+你是澳洲 WHV 英语口语教练，擅长把日常场景加上“突发变量”变成真正会发生的对话任务。用户当期场景见 user 消息。
+生成 3 个具体、可练、难度递进的任务，分别对应：
+1. skill="open" 开口开启：你主动说明来意，目标说清楚；
+2. skill="follow_up" 应对追问：对方有 follow-up，你要接住；
+3. skill="clarify" 异议/确认：围绕价格、时间、规则或职责确认细节。
+每个任务从以下变量选 1 个，3 个不能重复：快节奏、第一次处理、没被听懂、临时变化、电话沟通、确认细节、嘈杂环境、时间紧迫、对方不满、涉及规则、同事接手、临近下班。
+任务必须像 WHV 真实生活：点单卡壳、房东发消息、工头现场派活、药剂师问症状、客人投诉、同事交接。
+不要教科书题，不要在任务卡里直接给完整答案。
+title 中文 ≤15 字；prompt 中文 ≤50 字，写明你在哪、对方是谁、这一轮要办什么。
+counterpart 是对方开口或先回应你的 1 句自然英语，必须符合人物和情绪。followUp 是你说完后对方可能接着问的 1 句英语，要带忙、不耐烦、关心、怀疑等真实语气。repair 是没听懂时能说的短句。
+只输出 JSON：
+{"tasks":[{"title":"中文标题","prompt":"中文场景与目标","skill":"open|follow_up|clarify","twist":"突发变量","counterpart":"English opening line","counterpartZh":"中文解释","followUp":"English follow-up","followUpZh":"中文解释","repair":"English repair"}]}
 `.trim();
 
   const LOOKUP_SYSTEM_PROMPT = `
@@ -1184,7 +1240,12 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
       contentVersion: PACK.contentVersion,
       schemaVersion: PACK.schemaVersion,
       packSourceLoaded: Boolean(PACK_SOURCE),
-      issues: packIssues
+      issues: packIssues,
+      isHighValueLexiconEntry,
+      isBasicLearningWord,
+      normalizeGeneratedTasks,
+      normalizeModelData,
+      findLexiconMatches
     };
     if (packIssues.length) console.warn("SayFlow pack validation:", packIssues);
     renderTasks();
@@ -2047,7 +2108,10 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
       contextId: context.id,
       contextLabel: context.label,
       title: `${context.label} · ${task.title}`,
-      prompt: `${context.lead}${task.prompt}`
+      prompt: `${context.lead}${task.prompt}`,
+      twist: context.label,
+      skill: TASK_SKILLS[(TASKS.indexOf(task) + TASK_CONTEXTS.indexOf(context)) % TASK_SKILLS.length],
+      confirm: DEFAULT_CONFIRM
     })))
       .filter((task) => !excludedIds.includes(task.id));
     return combinations
@@ -2093,10 +2157,10 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
             `可用范围：${SCENE_GENERATION_BRIEF[scene]}`,
             focusTerms.length ? `尽量自然融入这些词：${focusTerms.join("、")}` : "",
             `不要重复：${currentTitles.join("；") || "无"}`,
-            "生成 3 个任务。"
+            "生成 3 个难度递进的任务，三项技能和三个突发变量都不能重复。"
           ].filter(Boolean).join("\n")
         }
-      ], { temperature: 0.9, maxTokens: 1000, timeoutMs: 20000 });
+      ], { temperature: 0.85, maxTokens: 1200, timeoutMs: 20000 });
       const generated = normalizeGeneratedTasks(parseModelJson(content), scene);
       taskSets[scene] = fillTasks(generated, localFallback);
       document.documentElement.dataset.taskGeneration = "api";
@@ -2116,19 +2180,46 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
   }
 
   function normalizeGeneratedTasks(data, scene) {
+    const usedTwists = new Set();
     return asArray(data?.tasks || data)
-      .map((task, index) => ({
-        id: `ai-${scene}-${Date.now()}-${index}`,
-        scene,
-        title: cleanText(task?.title),
-        prompt: cleanText(task?.prompt || task?.scenario || task?.question),
-        followUp: cleanText(task?.followUp || task?.follow_up || task?.reply),
-        followUpZh: cleanText(task?.followUpZh || task?.follow_up_zh),
-        repair: cleanText(task?.repair || task?.rescue) ||
-          "Sorry, could you say that again a little more slowly?"
-      }))
+      .map((task, index) => {
+        const requestedTwist = cleanText(task?.twist || task?.variable || task?.unexpectedVariable);
+        const twist = requestedTwist && !usedTwists.has(requestedTwist)
+          ? requestedTwist
+          : TASK_TWISTS.find((item) => !usedTwists.has(item)) || TASK_TWISTS[index] || "临时变化";
+        usedTwists.add(twist);
+        return {
+          id: `ai-${scene}-${Date.now()}-${index}`,
+          scene,
+          title: cleanText(task?.title),
+          prompt: cleanText(task?.prompt || task?.scenario || task?.question),
+          skill: normalizeTaskSkill(task?.skill || task?.focus, index),
+          twist,
+          opening: cleanText(
+            task?.counterpart || task?.opening || task?.openingLine ||
+            task?.counterpartLine || task?.theySay
+          ),
+          openingZh: cleanText(
+            task?.counterpartZh || task?.openingZh || task?.openingLineZh ||
+            task?.counterpartLineZh
+          ),
+          replyBrief: cleanText(task?.replyBrief || task?.replyGoal || task?.goal),
+          followUp: cleanText(task?.followUp || task?.follow_up || task?.reply),
+          followUpZh: cleanText(task?.followUpZh || task?.follow_up_zh),
+          repair: cleanText(task?.repair || task?.rescue) || DEFAULT_REPAIR,
+          confirm: cleanText(task?.confirm || task?.checkPhrase || task?.confirmation) || DEFAULT_CONFIRM
+        };
+      })
       .filter((task) => task.title && task.prompt && task.followUp)
       .slice(0, 3);
+  }
+
+  function normalizeTaskSkill(value, index = 0) {
+    const raw = cleanText(value).toLowerCase();
+    if (/clarify|confirm|异议|确认/.test(raw)) return "clarify";
+    if (/follow|reply|追问|应对/.test(raw)) return "follow_up";
+    if (/open|start|开口|开启/.test(raw)) return "open";
+    return TASK_SKILLS[index] || "open";
   }
 
   function fillTasks(generated, fallback) {
@@ -2161,7 +2252,10 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
     elements.taskGrid.innerHTML = tasks.map((task, index) => `
       <button class="task-card ${activeTask?.id === task.id ? "active" : ""}" type="button" data-task-id="${escapeAttribute(task.id)}">
         <span class="task-card-top">
-          <span class="task-scene">${escapeHtml(SCENE_LABELS[task.scene])}</span>
+          <span class="task-card-meta">
+            <span class="task-scene">${escapeHtml(SCENE_LABELS[task.scene])}</span>
+            ${task.twist ? `<span class="task-twist">${escapeHtml(task.twist)}</span>` : ""}
+          </span>
           <span class="task-number">0${index + 1}</span>
         </span>
         <span>
@@ -2169,7 +2263,7 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
           <span class="task-card-copy">${escapeHtml(task.prompt)}</span>
         </span>
         <span class="task-card-bottom">
-          <span class="task-task-duration">约 15–20 分钟</span>
+          <span class="task-task-duration">${escapeHtml(TASK_SKILL_LABELS[task.skill] || "真实对话")}</span>
           <span class="task-start">${activeTask?.id === task.id ? "继续练习" : "开始练习"} →</span>
         </span>
       </button>
@@ -2246,9 +2340,15 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
       scene: task.scene || "life",
       title: task.title,
       prompt: task.prompt || "",
+      skill: normalizeTaskSkill(task.skill),
+      twist: cleanText(task.twist),
+      opening: task.opening || "",
+      openingZh: task.openingZh || "",
+      replyBrief: task.replyBrief || "",
       followUp: task.followUp || "",
       followUpZh: task.followUpZh || "",
-      repair: task.repair || ""
+      repair: task.repair || DEFAULT_REPAIR,
+      confirm: task.confirm || DEFAULT_CONFIRM
     };
   }
 
@@ -2317,17 +2417,32 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
     showState("loading");
     elements.generateButton.disabled = true;
     elements.generateButton.querySelector("span:first-child").textContent = "正在组织表达…";
+    const startedAt = performance.now();
 
     try {
+      const requestStartedAt = performance.now();
       const content = await requestChatCompletion([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input, activeTone) }
-      ], { temperature: 0.4, maxTokens: 3600, timeoutMs: 60000 });
+      ], { temperature: 0.35, maxTokens: 2200, timeoutMs: 60000 });
+      const requestMs = Math.round(performance.now() - requestStartedAt);
+      const renderStartedAt = performance.now();
       const parsed = parseModelJson(content);
       currentResult = normalizeModelData(parsed, input);
       showState("content");
       renderResult(currentResult, { demo: false });
       scrollToResult();
+      const timing = {
+        requestMs,
+        renderMs: Math.round(performance.now() - renderStartedAt),
+        totalMs: Math.round(performance.now() - startedAt),
+        responseChars: content.length,
+        model: settings.model
+      };
+      window.SAYFLOW_LAST_GENERATION = timing;
+      console.info(
+        `[SayFlow] 地道表达 ${timing.totalMs}ms（模型 ${timing.requestMs}ms，渲染 ${timing.renderMs}ms，返回 ${timing.responseChars} 字符）`
+      );
     } finally {
       elements.generateButton.disabled = false;
       elements.generateButton.querySelector("span:first-child").textContent = "生成地道表达";
@@ -2415,6 +2530,8 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
       `本次希望的语气：${TONE_LABELS[tone] || "自然口语"}`,
       `优先音标：${settings.accent === "uk" ? "英音 UK" : "美音 US"}`,
       activeTask ? `任务场景：${SCENE_LABELS[activeTask.scene]} / ${activeTask.title}` : "使用方式：自由输入",
+      activeTask?.opening ? `对方先开口：${activeTask.opening}` : "",
+      activeTask?.replyBrief ? `这一轮回复目标：${activeTask.replyBrief}` : "",
       activeTask ? `说话后对方可能追问：${activeTask.followUp}` : "",
       "",
       "用户原句：",
@@ -2599,8 +2716,45 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
 
     return {
       ...result,
-      learningItems: [...localItems, ...(result.learningItems || [])].slice(0, 10)
+      learningItems: [...(result.learningItems || []), ...localItems].slice(0, 5)
     };
+  }
+
+  function isHighValueLexiconEntry(entry) {
+    const kind = cleanText(entry?.kind).toLowerCase();
+    const term = normalizeMatchText(entry?.term);
+    if (!term || kind === "place" || kind === "menu") return false;
+    if (kind === "idiom" || kind === "collocation") {
+      return !BASIC_LEARNING_PHRASES.has(term);
+    }
+    if (BASIC_LEARNING_PHRASES.has(term)) return false;
+    if (term.includes(" ")) {
+      return COMMON_HIGH_VALUE_WORDS.has(term) ||
+        HIGH_VALUE_WHV_TERMS.has(term) ||
+        (term.split(" ").length >= 2 && term.length >= 14);
+    }
+    if (isBasicLearningWord(term)) return false;
+    return COMMON_HIGH_VALUE_WORDS.has(term) ||
+      HIGH_VALUE_WHV_TERMS.has(term) ||
+      term.length >= 7;
+  }
+
+  function isBasicLearningWord(text) {
+    const term = normalizeMatchText(text);
+    if (!term) return false;
+    const candidates = new Set([term]);
+    if (term.endsWith("ies") && term.length > 4) candidates.add(`${term.slice(0, -3)}y`);
+    if (term.endsWith("es") && term.length > 3) candidates.add(term.slice(0, -2));
+    if (term.endsWith("s") && term.length > 2) candidates.add(term.slice(0, -1));
+    if (term.endsWith("ed") && term.length > 3) {
+      candidates.add(term.slice(0, -2));
+      candidates.add(term.slice(0, -1));
+    }
+    if (term.endsWith("ing") && term.length > 4) {
+      candidates.add(term.slice(0, -3));
+      candidates.add(`${term.slice(0, -3)}e`);
+    }
+    return [...candidates].some((candidate) => BASIC_LEARNING_WORDS.has(candidate));
   }
 
   function findLexiconMatches(text) {
@@ -2609,6 +2763,7 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
     const ambiguous = new Set(["flat", "main", "side", "special", "fee", "interest"]);
     return LEXICON
       .filter((entry) => !ambiguous.has(entry.term.toLowerCase()))
+      .filter(isHighValueLexiconEntry)
       .filter((entry) => {
         const keys = [entry.term, ...(entry.aliases || [])]
           .map(normalizeMatchText)
@@ -2716,6 +2871,7 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
         .replace(/\s+/g, " ")
         .trim();
       if (!text || /\s/.test(text)) return false;
+      if (isBasicLearningWord(text)) return false;
       if (!level) return COMMON_HIGH_VALUE_WORDS.has(text);
       if (/(a1|a2|cet[-\s]?3|basic|初学|基础)/i.test(level)) return false;
       // CET-4/6 remain compatible with cards saved before the CEFR rule changed.
@@ -2875,9 +3031,15 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
     const currentTask = activeTask || {
       scene: "",
       title: "自由输入",
+      skill: "open",
+      twist: "",
+      opening: "",
+      openingZh: "",
+      replyBrief: "",
       followUp: "Could you tell me a bit more about what you need?",
       followUpZh: "对方可能会追问更多背景、时间、数量或原因。",
-      repair: "Sorry, could you say that again a little more slowly?"
+      repair: DEFAULT_REPAIR,
+      confirm: DEFAULT_CONFIRM
     };
     const practiceStatus = savedEntry?.review
       ? `第 ${Math.max(1, savedEntry.review.stage + 1)} 次复习`
@@ -2900,10 +3062,44 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
         <div class="chunk-grid">${chunksHtml}</div>
       ` : ""}
 
-      <p class="section-label">说完以后</p>
+      <p class="section-label">对话演练</p>
       <div class="coach-panel">
+        <article class="coach-card counterpart">
+          <p class="coach-label">对方先开口</p>
+          ${currentTask.opening ? `
+            <p class="coach-text">${escapeHtml(currentTask.opening)}</p>
+            ${currentTask.openingZh ? `<p class="coach-translation">${escapeHtml(currentTask.openingZh)}</p>` : ""}
+            <div class="coach-actions">
+              <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(currentTask.opening)}" aria-label="收藏到表达库" title="收藏到表达库">
+                ${bookmarkIcon()}
+              </button>
+              <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.opening)}" aria-label="朗读对方开场">
+                ${speakerIcon()}
+              </button>
+            </div>
+          ` : `
+            <p class="coach-text coach-cue">这题由你先开口。</p>
+            <p class="coach-translation">${escapeHtml(currentTask.replyBrief || currentTask.prompt || "先说明来意，再把时间、数量或下一步说清楚。")}</p>
+          `}
+        </article>
+        <article class="coach-card reply-example">
+          <p class="coach-label">你先这样回</p>
+          <p class="coach-text">${escapeHtml(supportText)}</p>
+          ${currentTask.replyBrief ? `<p class="coach-translation">${escapeHtml(currentTask.replyBrief)}</p>` : ""}
+          <div class="coach-actions">
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(supportText)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
+            <button class="mini-action" type="button" data-speak="${escapeAttribute(supportText)}" aria-label="朗读你的回复">
+              ${speakerIcon()}
+            </button>
+            <button class="mini-action" type="button" data-copy="${escapeAttribute(supportText)}" aria-label="复制你的回复">
+              ${copyIcon()}
+            </button>
+          </div>
+        </article>
         <article class="coach-card">
-          <p class="coach-label">对方可能会问</p>
+          <p class="coach-label">对方可能接着问</p>
           <p class="coach-text">${escapeHtml(currentTask.followUp)}</p>
           ${currentTask.followUpZh ? `<p class="coach-translation">${escapeHtml(currentTask.followUpZh)}</p>` : ""}
           <div class="coach-actions">
@@ -2916,15 +3112,31 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
           </div>
         </article>
         <article class="coach-card repair">
-          <p class="coach-label">听不懂时先说</p>
+          <p class="coach-label">没听清 / 词穷</p>
           <p class="coach-text">${escapeHtml(currentTask.repair)}</p>
-          <p class="coach-translation">先争取时间，再把对话接回来。</p>
+          <p class="coach-translation">先争取时间，再请对方重复关键词。</p>
           <div class="coach-actions">
             <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(currentTask.repair)}" aria-label="收藏到表达库" title="收藏到表达库">
               ${bookmarkIcon()}
             </button>
             <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.repair)}" aria-label="朗读救场表达">
               ${speakerIcon()}
+            </button>
+          </div>
+        </article>
+        <article class="coach-card confirm">
+          <p class="coach-label">需要查一下 / 再确认</p>
+          <p class="coach-text">${escapeHtml(currentTask.confirm || DEFAULT_CONFIRM)}</p>
+          <p class="coach-translation">不确定规则、价格、库存或安排时，先明确告诉对方你会确认后回复。</p>
+          <div class="coach-actions">
+            <button class="mini-action" type="button" data-save-sentence="${escapeAttribute(currentTask.confirm || DEFAULT_CONFIRM)}" aria-label="收藏到表达库" title="收藏到表达库">
+              ${bookmarkIcon()}
+            </button>
+            <button class="mini-action" type="button" data-speak="${escapeAttribute(currentTask.confirm || DEFAULT_CONFIRM)}" aria-label="朗读确认表达">
+              ${speakerIcon()}
+            </button>
+            <button class="mini-action" type="button" data-copy="${escapeAttribute(currentTask.confirm || DEFAULT_CONFIRM)}" aria-label="复制确认表达">
+              ${copyIcon()}
             </button>
           </div>
         </article>
@@ -4357,9 +4569,15 @@ title 中文 ≤ 15 字带画面感；prompt ≤ 40 字说清你在哪、对方�
       scene: task.scene,
       title: task.title,
       prompt: task.prompt,
+      skill: task.skill,
+      twist: task.twist,
+      opening: task.opening,
+      openingZh: task.openingZh,
+      replyBrief: task.replyBrief,
       followUp: task.followUp,
       followUpZh: task.followUpZh,
-      repair: task.repair
+      repair: task.repair,
+      confirm: task.confirm
     };
   }
 
