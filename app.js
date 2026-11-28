@@ -14,7 +14,7 @@
     locale: "en-AU",
     speechLanguage: "en-US",
     schemaVersion: PACK_SCHEMA_VERSION,
-    contentVersion: "1.4.0",
+    contentVersion: "1.4.1",
     expected: { scenes: 12, tasks: 56, lexiconCategories: 11, lexiconMinPerCategory: 50 }
   };
 
@@ -845,16 +845,16 @@
 - 不补写事实，不改变原意；优先短句、常用词和容易开口的说法。
 - natural_versions 只给 1 个最自然的版本。
 - useful_chunks 正好给 3 个，类型要区分，不要重复整句；每个只配一句短例句。
-- key_words 给 0-2 个，宁缺毋滥；必须真实出现在 natural_versions 中，并且值得单独学。
+- key_words 给 4-6 个高质量词；必须真实出现在 natural_versions 中。如果整句确实没有足够高价值词，可以少于 4 个，但不能硬凑。
 - 不要拿 order、customer、product、item、job、manager、staff、coffee 等基础词凑数。优先 B2/C1、熟词僻义、澳洲 WHV 专用词或容易记混的搭配。
-- key_phrases 给 0-1 个；不能把整句当词组，也不能与重点单词重复。
+- key_phrases 给 0-2 个；不能把整句当词组，也不能与重点单词重复。
 - practice_prompts 只给 1 条，必须是能让用户马上重说一遍的中文任务。
 - 语块要能在其他场景重复使用；词组不要把整句当词组，也不要重复语块。
 - 音标不确定时写“暂无”；按用户偏好给 US 或 UK 音标。
 - word_family 只保留真实、可复用的派生关系，不列第三人称单数、过去式、复数等屈折形式。
 - memory_trick 和 homophone_trick 只在确有帮助时写，不自然就留空。
 - 单词和义项词性只写 n./v./adj./adv. 等缩写，不写中文词性。
-- 每个重点单词只列 1-2 个义项：当前语境义项必列；最多再加 1 个真正常见且不同的义项。每项配一句短例句。
+- 每个重点单词只列 1-2 个义项：当前语境义项必列；只有在确实存在常见且明显不同的义项时，才再加 1 个。每项配一句短例句，不展开全部词义。
 - 当前语境义项必须标记 in_context: true，且只能标记一个。
 - 不输出 Markdown，不输出解释文字，只输出一个合法 JSON 对象。
 
@@ -2424,7 +2424,7 @@ counterpart 是对方开口或先回应你的 1 句自然英语，必须符合�
       const content = await requestChatCompletion([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(input, activeTone) }
-      ], { temperature: 0.35, maxTokens: 2200, timeoutMs: 60000 });
+      ], { temperature: 0.3, maxTokens: 2800, timeoutMs: 60000 });
       const requestMs = Math.round(performance.now() - requestStartedAt);
       const renderStartedAt = performance.now();
       const parsed = parseModelJson(content);
@@ -2614,7 +2614,10 @@ counterpart 是对方开口或先回应你的 1 句自然英语，必须符合�
         return true;
       })
       .sort((left, right) => (left.type === right.type ? 0 : left.type === "word" ? -1 : 1));
-    const practicalItems = items.slice(0, 3);
+    const practicalItems = [
+      ...items.filter((item) => item.type === "word").slice(0, 6),
+      ...items.filter((item) => item.type !== "word").slice(0, 2)
+    ];
     let expressionChunks = normalizeExpressionChunks(
       data.useful_chunks || data.expression_chunks || data.chunks
     );
@@ -2716,7 +2719,7 @@ counterpart 是对方开口或先回应你的 1 句自然英语，必须符合�
 
     return {
       ...result,
-      learningItems: [...(result.learningItems || []), ...localItems].slice(0, 5)
+      learningItems: [...(result.learningItems || []), ...localItems].slice(0, 8)
     };
   }
 
